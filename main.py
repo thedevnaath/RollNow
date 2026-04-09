@@ -1,14 +1,15 @@
 import os
+import sys
 import json
 import subprocess
 import requests
+import re
 from google import genai
 import edge_tts
 import asyncio
 import urllib.parse
 
 # --- 1. Configuration ---
-# The new SDK automatically picks up GEMINI_API_KEY from your environment variables
 client = genai.Client() 
 
 def format_srt_time(seconds):
@@ -21,7 +22,6 @@ def format_srt_time(seconds):
 async def main():
     print("🧠 Generating script with Gemini...")
     
-    # --- 2. The Brain: Psychological "Anchor & Twist" Prompt ---
     prompt = """
     You are an expert in human behavior and dark psychology. Generate a 30-second YouTube Shorts script designed to provoke deep self-reflection.
     Follow this structure:
@@ -43,95 +43,15 @@ async def main():
     Make sure there is exactly one image prompt for every sentence. The script_text must be one continuous string.
     """
     
-    # Using the new Google GenAI SDK syntax
     response = client.models.generate_content(
         model='gemini-2.5-flash',
         contents=prompt
     )
     
-    # Clean up JSON formatting if Gemini adds markdown blocks
-    raw_text = response.text.strip().removeprefix('```json').removesuffix('```').strip()
-    data = json.loads(raw_text)
-    
-    script_text = data.get('script_text', '')
-    image_prompts = data.get('image_prompts', [])
-    
-    if not script_text:
-        print("❌ Error: Gemini returned an empty script.")
-        return
-        
-    print("🎙️ Generating Voiceover and capturing word timestamps...")
-    
-    # --- 3. The Voice & Subtitle Sync ---
-    voice = "en-US-ChristopherNeural" # Deep, serious tone
-    communicate = edge_tts.Communicate(script_text, voice)
-    
-    word_boundaries = []
-    with open("voiceover.mp3", "wb") as audio_file:
-        async for chunk in communicate.stream():
-            if chunk["type"] == "audio":
-                audio_file.write(chunk["data"])
-            elif chunk["type"] == "WordBoundary":
-                word_boundaries.append({
-                    "text": chunk["text"],
-                    "start": chunk["offset"] / 10000000,
-                    "duration": chunk["duration"] / 10000000
-                })
+    # --- Robust JSON Parsing ---
+    raw_text = response.text.strip()
+    # Strip out any markdown code blocks using regex
+    raw_text = re.sub(r'^
+http://googleusercontent.com/immersive_entry_chip/0
 
-    # --- Failsafe: Prevent the IndexError if TTS fails ---
-    if not word_boundaries:
-        print("❌ Error: Edge TTS failed to generate word boundaries. The text may have contained invalid characters.")
-        return
-
-    print("✍️ Forging dynamic subtitles (.srt)...")
-    with open("captions.srt", "w", encoding="utf-8") as f:
-        for i, word in enumerate(word_boundaries):
-            start = word["start"]
-            end = start + word["duration"]
-            f.write(f"{i+1}\n")
-            f.write(f"{format_srt_time(start)} --> {format_srt_time(end)}\n")
-            f.write(f"{word['text'].upper()}\n\n")
-
-    print("🎨 Generating Visuals via Pollinations API...")
-    
-    # --- 4. The Visuals ---
-    image_files = []
-    total_audio_time = word_boundaries[-1]["start"] + word_boundaries[-1]["duration"]
-    time_per_image = total_audio_time / len(image_prompts)
-    
-    for i, img_prompt in enumerate(image_prompts):
-        safe_prompt = f"High-fidelity anime realism, cinematic lighting. {img_prompt}. Never include ghosts, monsters, or distorted figures."
-        encoded_prompt = urllib.parse.quote(safe_prompt)
-        url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1080&height=1920&model=flux&nologo=true"
-        
-        r = requests.get(url)
-        img_path = f"image_{i}.png"
-        with open(img_path, "wb") as f:
-            f.write(r.content)
-        image_files.append(img_path)
-
-    print("🎞️ Assembling final sequence...")
-    
-    with open("images.txt", "w") as f:
-        for img in image_files:
-            f.write(f"file '{img}'\n")
-            f.write(f"duration {time_per_image}\n")
-        f.write(f"file '{image_files[-1]}'\n")
-
-    # --- 5. The FFmpeg Assembly ---
-    ffmpeg_cmd = [
-        'ffmpeg', '-y',
-        '-f', 'concat', '-safe', '0', '-i', 'images.txt',
-        '-i', 'voiceover.mp3',
-        '-vf', "subtitles=captions.srt:force_style='Fontname=Liberation Sans,Fontsize=24,PrimaryColour=&H00FFFFFF&,OutlineColour=&H00000000&,Outline=2,Alignment=10'",
-        '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
-        '-c:a', 'copy',
-        '-shortest',
-        'final_video.mp4'
-    ]
-    
-    subprocess.run(ffmpeg_cmd, check=True)
-    print("✅ Video generated successfully: final_video.mp4")
-
-if __name__ == "__main__":
-    asyncio.run(main())
+Commit this complete block to your repository and manually trigger the workflow again!
