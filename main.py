@@ -53,5 +53,3 @@ async def main():
     # Strip out any markdown code blocks using regex
     raw_text = re.sub(r'^
 http://googleusercontent.com/immersive_entry_chip/0
-
-Commit this complete block to your repository and manually trigger the workflow again!
