@@ -2,15 +2,14 @@ import os
 import json
 import subprocess
 import requests
-import google.generativeai as genai
+from google import genai
 import edge_tts
 import asyncio
 import urllib.parse
 
 # --- 1. Configuration ---
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-2.5-flash')
+# The new SDK automatically picks up GEMINI_API_KEY from your environment variables
+client = genai.Client() 
 
 def format_srt_time(seconds):
     hours = int(seconds // 3600)
@@ -44,15 +43,23 @@ async def main():
     Make sure there is exactly one image prompt for every sentence. The script_text must be one continuous string.
     """
     
-    response = model.generate_content(prompt)
+    # Using the new Google GenAI SDK syntax
+    response = client.models.generate_content(
+        model='gemini-2.5-flash',
+        contents=prompt
+    )
     
     # Clean up JSON formatting if Gemini adds markdown blocks
     raw_text = response.text.strip().removeprefix('```json').removesuffix('```').strip()
     data = json.loads(raw_text)
     
-    script_text = data['script_text']
-    image_prompts = data['image_prompts']
+    script_text = data.get('script_text', '')
+    image_prompts = data.get('image_prompts', [])
     
+    if not script_text:
+        print("❌ Error: Gemini returned an empty script.")
+        return
+        
     print("🎙️ Generating Voiceover and capturing word timestamps...")
     
     # --- 3. The Voice & Subtitle Sync ---
@@ -71,6 +78,11 @@ async def main():
                     "duration": chunk["duration"] / 10000000
                 })
 
+    # --- Failsafe: Prevent the IndexError if TTS fails ---
+    if not word_boundaries:
+        print("❌ Error: Edge TTS failed to generate word boundaries. The text may have contained invalid characters.")
+        return
+
     print("✍️ Forging dynamic subtitles (.srt)...")
     with open("captions.srt", "w", encoding="utf-8") as f:
         for i, word in enumerate(word_boundaries):
@@ -84,13 +96,10 @@ async def main():
     
     # --- 4. The Visuals ---
     image_files = []
-    # We calculate roughly how long each image should be on screen based on sentence chunks
-    # For simplicity in this script, we divide total audio time by number of images
     total_audio_time = word_boundaries[-1]["start"] + word_boundaries[-1]["duration"]
     time_per_image = total_audio_time / len(image_prompts)
     
     for i, img_prompt in enumerate(image_prompts):
-        # Enforcing our aesthetic and strict negative constraints
         safe_prompt = f"High-fidelity anime realism, cinematic lighting. {img_prompt}. Never include ghosts, monsters, or distorted figures."
         encoded_prompt = urllib.parse.quote(safe_prompt)
         url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1080&height=1920&model=flux&nologo=true"
@@ -107,10 +116,9 @@ async def main():
         for img in image_files:
             f.write(f"file '{img}'\n")
             f.write(f"duration {time_per_image}\n")
-        f.write(f"file '{image_files[-1]}'\n") # FFmpeg quirk requires last file repeated
+        f.write(f"file '{image_files[-1]}'\n")
 
     # --- 5. The FFmpeg Assembly ---
-    # Using Liberation Sans which we will install in the GitHub Action
     ffmpeg_cmd = [
         'ffmpeg', '-y',
         '-f', 'concat', '-safe', '0', '-i', 'images.txt',
