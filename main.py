@@ -42,10 +42,23 @@ async def main():
     Make sure there is exactly one image prompt for every sentence. The script_text must be one continuous string.
     """
     
-    response = client.models.generate_content(
-        model='gemini-2.5-flash',
-        contents=prompt
-    )
+    # --- Robust Retry Loop for Gemini API ---
+    response = None
+    for attempt in range(3):
+        try:
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=prompt
+            )
+            break 
+        except Exception as e:
+            print(f"⚠️ Attempt {attempt + 1}: Gemini API Error - {e}")
+            if attempt < 2:
+                print("Retrying in 10 seconds...")
+                await asyncio.sleep(10)
+            else:
+                print("❌ Fatal Error: Gemini API failed after 3 attempts. Google servers are too busy.")
+                sys.exit(1)
     
     # --- Bulletproof JSON Parsing ---
     raw_text = response.text.strip()
@@ -69,9 +82,13 @@ async def main():
         
     print("🎙️ Generating Voiceover and capturing word timestamps...")
     
-    # --- Text Sanitization: Prevent SSML Crashes ---
-    # Removes special characters that break Microsoft's TTS engine
-    clean_text = script_text.replace('*', '').replace('"', '').replace('&', 'and').replace('<', '').replace('>', '')
+    # --- EXTREME Text Sanitization ---
+    # Strip EVERYTHING that is not a basic letter, number, or standard punctuation
+    clean_text = script_text.replace('&', 'and').replace('\n', ' ').replace('\r', '')
+    valid_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,!?"
+    clean_text = "".join(c for c in clean_text if c in valid_chars)
+    clean_text = " ".join(clean_text.split()) # Remove extra spaces
+    
     print(f"Speaking: {clean_text}")
 
     voice = "en-US-ChristopherNeural" 
@@ -93,7 +110,7 @@ async def main():
                         })
             
             if word_boundaries:
-                break # Success! Break out of the retry loop.
+                break 
             else:
                 print(f"⚠️ Attempt {attempt + 1}: TTS returned empty stream. Retrying in 2 seconds...")
                 await asyncio.sleep(2)
@@ -102,7 +119,8 @@ async def main():
             await asyncio.sleep(2)
 
     if not word_boundaries:
-        print("❌ Error: Edge TTS failed after 3 attempts. The server might be rate-limiting the GitHub Action IP.")
+        print("❌ Error: Edge TTS failed after 3 attempts.")
+        print("🚨 Note: If you see this error, Microsoft has temporarily blocked the GitHub Actions Server IP. You will need to wait an hour, or run this Python script locally on your own computer.")
         sys.exit(1)
 
     print("✍️ Forging dynamic subtitles (.srt)...")
@@ -123,7 +141,6 @@ async def main():
     for i, img_prompt in enumerate(image_prompts):
         safe_prompt = f"High-fidelity anime realism, cinematic lighting. {img_prompt}. Never include ghosts, monsters, or distorted figures."
         encoded_prompt = urllib.parse.quote(safe_prompt)
-        # --- Fixed URL (Removed broken markdown formatting) ---
         url = f"[https://image.pollinations.ai/prompt/](https://image.pollinations.ai/prompt/){encoded_prompt}?width=1080&height=1920&model=flux&nologo=true"
         
         r = requests.get(url)
