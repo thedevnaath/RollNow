@@ -1,0 +1,40 @@
+name: Generate Daily Psychology Short
+
+on:
+  schedule:
+    - cron: '0 8 * * *' # Runs every day at 08:00 UTC
+  workflow_dispatch: # Allows you to click a button to run it manually right now
+
+jobs:
+  create_video:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install System Dependencies (FFmpeg & Fonts)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg fonts-liberation
+
+    - name: Install Python Libraries
+      run: |
+        pip install -r requirements.txt
+
+    - name: Run the Video Engine
+      env:
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      run: python main.py
+
+    - name: Upload Final Video Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: psychology-short
+        path: final_video.mp4
+        retention-days: 7
