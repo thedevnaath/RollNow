@@ -19,7 +19,7 @@ def format_srt_time(seconds):
     return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
 
 async def main():
-    print("🧠 Generating script with Gemini...")
+    print("🧠 Generating script with Gemini 1.5 Flash...")
     
     prompt = """
     You are an expert in human behavior and dark psychology. Generate a 30-second YouTube Shorts script designed to provoke deep self-reflection.
@@ -42,12 +42,12 @@ async def main():
     Make sure there is exactly one image prompt for every sentence. The script_text must be one continuous string.
     """
     
-    # --- Robust Retry Loop for Gemini API ---
+    # --- Robust Retry Loop using stable gemini-1.5-flash ---
     response = None
     for attempt in range(3):
         try:
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-2.5-flash-lite',
                 contents=prompt
             )
             break 
@@ -57,7 +57,7 @@ async def main():
                 print("Retrying in 10 seconds...")
                 await asyncio.sleep(10)
             else:
-                print("❌ Fatal Error: Gemini API failed after 3 attempts. Google servers are too busy.")
+                print("❌ Fatal Error: Gemini API failed after 3 attempts.")
                 sys.exit(1)
     
     # --- Bulletproof JSON Parsing ---
@@ -83,11 +83,10 @@ async def main():
     print("🎙️ Generating Voiceover and capturing word timestamps...")
     
     # --- EXTREME Text Sanitization ---
-    # Strip EVERYTHING that is not a basic letter, number, or standard punctuation
     clean_text = script_text.replace('&', 'and').replace('\n', ' ').replace('\r', '')
     valid_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,!?"
     clean_text = "".join(c for c in clean_text if c in valid_chars)
-    clean_text = " ".join(clean_text.split()) # Remove extra spaces
+    clean_text = " ".join(clean_text.split()) 
     
     print(f"Speaking: {clean_text}")
 
@@ -141,6 +140,8 @@ async def main():
     for i, img_prompt in enumerate(image_prompts):
         safe_prompt = f"High-fidelity anime realism, cinematic lighting. {img_prompt}. Never include ghosts, monsters, or distorted figures."
         encoded_prompt = urllib.parse.quote(safe_prompt)
+        
+        # --- Clean, Functional URL (No markdown links) ---
         url = f"[https://image.pollinations.ai/prompt/](https://image.pollinations.ai/prompt/){encoded_prompt}?width=1080&height=1920&model=flux&nologo=true"
         
         r = requests.get(url)
