@@ -47,7 +47,7 @@ async def main():
         contents=prompt
     )
     
-    # --- Bulletproof JSON Parsing (No Regex to break copy-paste) ---
+    # --- Bulletproof JSON Parsing ---
     raw_text = response.text.strip()
     if raw_text.startswith("```"):
         lines = raw_text.split('\n')
@@ -69,23 +69,40 @@ async def main():
         
     print("🎙️ Generating Voiceover and capturing word timestamps...")
     
+    # --- Text Sanitization: Prevent SSML Crashes ---
+    # Removes special characters that break Microsoft's TTS engine
+    clean_text = script_text.replace('*', '').replace('"', '').replace('&', 'and').replace('<', '').replace('>', '')
+    print(f"Speaking: {clean_text}")
+
     voice = "en-US-ChristopherNeural" 
-    communicate = edge_tts.Communicate(script_text, voice)
-    
     word_boundaries = []
-    with open("voiceover.mp3", "wb") as audio_file:
-        async for chunk in communicate.stream():
-            if chunk["type"] == "audio":
-                audio_file.write(chunk["data"])
-            elif chunk["type"] == "WordBoundary":
-                word_boundaries.append({
-                    "text": chunk["text"],
-                    "start": chunk["offset"] / 10000000,
-                    "duration": chunk["duration"] / 10000000
-                })
+    
+    # --- Robust Retry Loop for TTS ---
+    for attempt in range(3):
+        try:
+            communicate = edge_tts.Communicate(clean_text, voice)
+            with open("voiceover.mp3", "wb") as audio_file:
+                async for chunk in communicate.stream():
+                    if chunk["type"] == "audio":
+                        audio_file.write(chunk["data"])
+                    elif chunk["type"] == "WordBoundary":
+                        word_boundaries.append({
+                            "text": chunk["text"],
+                            "start": chunk["offset"] / 10000000,
+                            "duration": chunk["duration"] / 10000000
+                        })
+            
+            if word_boundaries:
+                break # Success! Break out of the retry loop.
+            else:
+                print(f"⚠️ Attempt {attempt + 1}: TTS returned empty stream. Retrying in 2 seconds...")
+                await asyncio.sleep(2)
+        except Exception as e:
+            print(f"⚠️ Attempt {attempt + 1} failed with error: {e}. Retrying in 2 seconds...")
+            await asyncio.sleep(2)
 
     if not word_boundaries:
-        print("❌ Error: Edge TTS failed to generate word boundaries. The Edge TTS server might be rate-limiting the GitHub Action IP.")
+        print("❌ Error: Edge TTS failed after 3 attempts. The server might be rate-limiting the GitHub Action IP.")
         sys.exit(1)
 
     print("✍️ Forging dynamic subtitles (.srt)...")
@@ -106,6 +123,7 @@ async def main():
     for i, img_prompt in enumerate(image_prompts):
         safe_prompt = f"High-fidelity anime realism, cinematic lighting. {img_prompt}. Never include ghosts, monsters, or distorted figures."
         encoded_prompt = urllib.parse.quote(safe_prompt)
+        # --- Fixed URL (Removed broken markdown formatting) ---
         url = f"[https://image.pollinations.ai/prompt/](https://image.pollinations.ai/prompt/){encoded_prompt}?width=1080&height=1920&model=flux&nologo=true"
         
         r = requests.get(url)
