@@ -112,8 +112,8 @@ async def main():
     
     # Using Stable Diffusion XL - The industry standard for high-res free generation
     p1 = "https://"
-    p2 = "router.huggingface.co/hf-inference"
-    p3 = "/models/stabilityai/stable-diffusion-xl-base-1.0"
+    p2 = "api-inference.huggingface.co"
+    p3 = "/models/ByteDance/SDXL-Lightning"
     HF_API_URL = p1 + p2 + p3
     headers = {"Authorization": f"Bearer {HF_TOKEN}"}
     
