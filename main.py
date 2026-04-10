@@ -3,12 +3,17 @@ import sys
 import json
 import subprocess
 import requests
-import urllib.parse
 from google import genai
 import whisper
 import asyncio
 
+# --- 1. Configuration ---
 client = genai.Client()
+
+HF_TOKEN = os.environ.get('HF_TOKEN')
+if not HF_TOKEN:
+    print("❌ Error: HF_TOKEN is missing. Please add your Hugging Face token to GitHub Secrets.")
+    sys.exit(1)
 
 def format_srt_time(seconds):
     hours = int(seconds // 3600)
@@ -100,28 +105,44 @@ async def main():
         
     image_prompts = data.get('image_prompts', [])
 
-    print("🎨 Generating Visuals via Pollinations API...")
+    print("🎨 Generating High-Quality Visuals via Hugging Face API...")
     image_files = []
     total_audio_time = word_boundaries[-1]["start"] + word_boundaries[-1]["duration"]
     time_per_image = total_audio_time / len(image_prompts)
     
+    # Using Stable Diffusion XL - The industry standard for high-res free generation
+    HF_API_URL = "[https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0](https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0)"
+    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+    
     for i, img_prompt in enumerate(image_prompts):
         safe_prompt = f"High-fidelity anime realism, cinematic lighting. {img_prompt}. Never include ghosts, monsters, or distorted figures."
-        encoded_prompt = urllib.parse.quote(safe_prompt)
+        payload = {"inputs": safe_prompt}
         
-        # --- BULLETPROOF URL CONSTRUCTION ---
-        # Building the string in fragments so the chat UI cannot convert it into a markdown link
-        protocol = "https://"
-        domain = "image.pollinations.ai"
-        endpoint = "/prompt/"
-        url = f"{protocol}{domain}{endpoint}{encoded_prompt}?width=1080&height=1920&model=flux&nologo=true"
-        # ------------------------------------
+        img_path = f"image_{i}.jpg"
         
-        r = requests.get(url)
-        img_path = f"image_{i}.png"
-        with open(img_path, "wb") as f:
-            f.write(r.content)
-        image_files.append(img_path)
+        # --- ROBUST HUGGING FACE DOWNLOADER ---
+        for attempt in range(5):
+            print(f"   -> Requesting image {i+1}/4 from Hugging Face (Attempt {attempt+1})...")
+            r = requests.post(HF_API_URL, headers=headers, json=payload)
+            
+            if r.status_code == 200:
+                with open(img_path, "wb") as f:
+                    f.write(r.content)
+                image_files.append(img_path)
+                print(f"   ✅ Image {i+1} generated successfully.")
+                break
+            elif r.status_code == 503:
+                # 503 means the model is currently loading into server memory.
+                error_data = r.json()
+                wait_time = error_data.get("estimated_time", 15.0)
+                print(f"   ⏳ Model is booting up. Waiting {wait_time:.1f} seconds...")
+                await asyncio.sleep(wait_time + 2) # Give it 2 extra seconds to be safe
+            else:
+                print(f"   ⚠️ Hugging Face Error {r.status_code}: {r.text}")
+                await asyncio.sleep(5)
+                if attempt == 4:
+                    print(f"❌ Fatal Error: Could not fetch image {i+1} from Hugging Face.")
+                    sys.exit(1)
 
     print("🎞️ Assembling final sequence...")
     with open("images.txt", "w") as f:
