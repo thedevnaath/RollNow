@@ -1,4 +1,4 @@
 google-genai
-edge-tts
+openai-whisper
 requests
 Pillow
