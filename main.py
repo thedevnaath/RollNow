@@ -111,7 +111,10 @@ async def main():
     time_per_image = total_audio_time / len(image_prompts)
     
     # Using Stable Diffusion XL - The industry standard for high-res free generation
-    HF_API_URL = "[https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0](https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0)"
+    p1 = "https://"
+    p2 = "api-inference.huggingface.co"
+    p3 = "/models/stabilityai/stable-diffusion-xl-base-1.0"
+    HF_API_URL = p1 + p2 + p3
     headers = {"Authorization": f"Bearer {HF_TOKEN}"}
     
     for i, img_prompt in enumerate(image_prompts):
