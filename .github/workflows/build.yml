@@ -1,9 +1,7 @@
-name: Generate Daily Psychology Short
+name: Generate Psychology Short from Audio
 
 on:
-  schedule:
-    - cron: '0 8 * * *' # Runs every day at 08:00 UTC
-  workflow_dispatch: # Allows you to click a button to run it manually right now
+  workflow_dispatch: # Manual trigger only
 
 jobs:
   create_video:
@@ -18,7 +16,7 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Install System Dependencies (FFmpeg & Fonts)
+    - name: Install System Dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y ffmpeg fonts-liberation
