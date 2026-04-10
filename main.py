@@ -18,12 +18,10 @@ def format_srt_time(seconds):
     return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
 
 async def main():
-    # --- 1. Check for the user's audio file ---
     if not os.path.exists("voiceover.wav"):
         print("❌ Error: I cannot find 'voiceover.wav'. Please upload your voiceover file to the repository before running.")
         sys.exit(1)
 
-    # --- 2. OpenAI Whisper: Extracting Timestamps ---
     print("🎧 Booting OpenAI Whisper on GitHub CPU...")
     model = whisper.load_model("base") 
     
@@ -54,11 +52,9 @@ async def main():
             end = start + word["duration"]
             f.write(f"{i+1}\n")
             f.write(f"{format_srt_time(start)} --> {format_srt_time(end)}\n")
-            # Strip punctuation for bold, clean captions
             clean_word = "".join(c for c in word['text'] if c.isalnum())
             f.write(f"{clean_word.upper()}\n\n")
 
-    # --- 3. Gemini: Visual Storyboard Director ---
     print("🧠 Asking Gemini to generate the visual storyboard based on your audio...")
     prompt = f"""
     You are an expert in dark psychology and visual storytelling. 
@@ -104,7 +100,6 @@ async def main():
         
     image_prompts = data.get('image_prompts', [])
 
-    # --- 4. Pollinations: Visual Generation ---
     print("🎨 Generating Visuals via Pollinations API...")
     image_files = []
     total_audio_time = word_boundaries[-1]["start"] + word_boundaries[-1]["duration"]
@@ -113,7 +108,14 @@ async def main():
     for i, img_prompt in enumerate(image_prompts):
         safe_prompt = f"High-fidelity anime realism, cinematic lighting. {img_prompt}. Never include ghosts, monsters, or distorted figures."
         encoded_prompt = urllib.parse.quote(safe_prompt)
-        url = f"[https://image.pollinations.ai/prompt/](https://image.pollinations.ai/prompt/){encoded_prompt}?width=1080&height=1920&model=flux&nologo=true"
+        
+        # --- BULLETPROOF URL CONSTRUCTION ---
+        # Building the string in fragments so the chat UI cannot convert it into a markdown link
+        protocol = "https://"
+        domain = "image.pollinations.ai"
+        endpoint = "/prompt/"
+        url = f"{protocol}{domain}{endpoint}{encoded_prompt}?width=1080&height=1920&model=flux&nologo=true"
+        # ------------------------------------
         
         r = requests.get(url)
         img_path = f"image_{i}.png"
@@ -121,7 +123,6 @@ async def main():
             f.write(r.content)
         image_files.append(img_path)
 
-    # --- 5. FFmpeg: Final Assembly ---
     print("🎞️ Assembling final sequence...")
     with open("images.txt", "w") as f:
         for img in image_files:
