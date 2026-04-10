@@ -19,16 +19,16 @@ def format_srt_time(seconds):
 
 async def main():
     # --- 1. Check for the user's audio file ---
-    if not os.path.exists("voiceover.mp3"):
-        print("❌ Error: I cannot find 'voiceover.mp3'. Please upload your voiceover file to the repository before running.")
+    if not os.path.exists("voiceover.wav"):
+        print("❌ Error: I cannot find 'voiceover.wav'. Please upload your voiceover file to the repository before running.")
         sys.exit(1)
 
     # --- 2. OpenAI Whisper: Extracting Timestamps ---
     print("🎧 Booting OpenAI Whisper on GitHub CPU...")
-    model = whisper.load_model("base") # Loads a fast, highly accurate local model
+    model = whisper.load_model("base") 
     
     print("🔊 Listening to your voiceover to map exact word timestamps...")
-    result = model.transcribe("voiceover.mp3", word_timestamps=True)
+    result = model.transcribe("voiceover.wav", word_timestamps=True)
     
     full_text = result['text'].strip()
     print(f"📝 Transcribed Audio: {full_text}")
@@ -81,7 +81,7 @@ async def main():
     for attempt in range(3):
         try:
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-1.5-flash',
                 contents=prompt
             )
             break 
@@ -132,10 +132,10 @@ async def main():
     ffmpeg_cmd = [
         'ffmpeg', '-y',
         '-f', 'concat', '-safe', '0', '-i', 'images.txt',
-        '-i', 'voiceover.mp3',
+        '-i', 'voiceover.wav',
         '-vf', "subtitles=captions.srt:force_style='Fontname=Liberation Sans,Fontsize=24,PrimaryColour=&H00FFFFFF&,OutlineColour=&H00000000&,Outline=2,Alignment=10'",
         '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
-        '-c:a', 'copy',
+        '-c:a', 'aac', '-b:a', '192k',
         '-shortest',
         'final_video.mp4'
     ]
