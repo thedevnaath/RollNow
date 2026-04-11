@@ -28,8 +28,10 @@ jobs:
     - name: Run the Video Engine
       env:
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
       run: python main.py
+
 
 
     - name: Upload Final Video Artifact
