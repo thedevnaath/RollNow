@@ -2,18 +2,13 @@ import os
 import sys
 import json
 import subprocess
-import requests
 from google import genai
+from google.genai import types
 import whisper
 import asyncio
 
 # --- 1. Configuration ---
 client = genai.Client()
-
-HF_TOKEN = os.environ.get('HF_TOKEN')
-if not HF_TOKEN:
-    print("❌ Error: HF_TOKEN is missing. Please add your Hugging Face token to GitHub Secrets.")
-    sys.exit(1)
 
 def format_srt_time(seconds):
     hours = int(seconds // 3600)
@@ -105,46 +100,42 @@ async def main():
         
     image_prompts = data.get('image_prompts', [])
 
-    print("🎨 Generating High-Quality Visuals via Hugging Face API...")
+    print("🎨 Generating Cinematic Visuals via Google Imagen 3...")
     image_files = []
     total_audio_time = word_boundaries[-1]["start"] + word_boundaries[-1]["duration"]
     time_per_image = total_audio_time / len(image_prompts)
     
-    # Using Stable Diffusion XL - The industry standard for high-res free generation
-    p1 = "https://"
-    p2 = "api-inference.huggingface.co"
-    p3 = "/models/ByteDance/SDXL-Lightning"
-    HF_API_URL = p1 + p2 + p3
-    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-    
     for i, img_prompt in enumerate(image_prompts):
         safe_prompt = f"High-fidelity anime realism, cinematic lighting. {img_prompt}. Never include ghosts, monsters, or distorted figures."
-        payload = {"inputs": safe_prompt}
-        
         img_path = f"image_{i}.jpg"
         
-        # --- ROBUST HUGGING FACE DOWNLOADER ---
-        for attempt in range(5):
-            print(f"   -> Requesting image {i+1}/4 from Hugging Face (Attempt {attempt+1})...")
-            r = requests.post(HF_API_URL, headers=headers, json=payload)
-            
-            if r.status_code == 200:
+        # --- ROBUST GOOGLE IMAGEN DOWNLOADER ---
+        for attempt in range(3):
+            print(f"   -> Requesting image {i+1}/4 from Google Imagen 3 (Attempt {attempt+1})...")
+            try:
+                # We use the same Gemini API client to call the Imagen model
+                result = client.models.generate_images(
+                    model='imagen-3.0-generate-002',
+                    prompt=safe_prompt,
+                    config=types.GenerateImagesConfig(
+                        number_of_images=1,
+                        aspect_ratio="9:16", 
+                        output_mime_type="image/jpeg"
+                    )
+                )
+                
+                # Extract and save the raw image bytes
                 with open(img_path, "wb") as f:
-                    f.write(r.content)
+                    f.write(result.generated_images[0].image.image_bytes)
+                
                 image_files.append(img_path)
                 print(f"   ✅ Image {i+1} generated successfully.")
                 break
-            elif r.status_code == 503:
-                # 503 means the model is currently loading into server memory.
-                error_data = r.json()
-                wait_time = error_data.get("estimated_time", 15.0)
-                print(f"   ⏳ Model is booting up. Waiting {wait_time:.1f} seconds...")
-                await asyncio.sleep(wait_time + 2) # Give it 2 extra seconds to be safe
-            else:
-                print(f"   ⚠️ Hugging Face Error {r.status_code}: {r.text}")
+            except Exception as e:
+                print(f"   ⚠️ Imagen API Error: {e}")
                 await asyncio.sleep(5)
-                if attempt == 4:
-                    print(f"❌ Fatal Error: Could not fetch image {i+1} from Hugging Face.")
+                if attempt == 2:
+                    print(f"❌ Fatal Error: Could not fetch image {i+1} from Google Imagen.")
                     sys.exit(1)
 
     print("🎞️ Assembling final sequence...")
