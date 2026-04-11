@@ -1,146 +1,205 @@
 import os
 import sys
 import subprocess
-import whisper
-import asyncio
 import glob
 
-def format_srt_time(seconds):
-    hours = int(seconds // 3600)
-    minutes = int((seconds % 3600) // 60)
-    secs = int(seconds % 60)
-    millis = int((seconds % 1) * 1000)
-    return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
-
-async def main():
-    if not os.path.exists("voiceover.wav"):
-        print("❌ Error: I cannot find 'voiceover.wav'. Please upload your voiceover file to the repository before running.")
-        sys.exit(1)
-
-    print("🎧 Booting OpenAI Whisper on GitHub CPU...")
-    model = whisper.load_model("base") 
+def main():
+    # --- 1. The Vector Generator: Writing the Manim architecture ---
+    print("📐 Generating 5-Minute Mathematical Vector Geometry (Manim)...")
     
-    print("🔊 Listening to your voiceover to map exact word timestamps...")
-    result = model.transcribe("voiceover.wav", word_timestamps=True)
-    
-    raw_words = []
-    for segment in result['segments']:
-        if 'words' in segment:
-            for word in segment['words']:
-                raw_words.append({
-                    "text": word['word'].strip(),
-                    "start": word['start'],
-                    "duration": word['end'] - word['start']
-                })
-
-    if not raw_words:
-        print("❌ Error: Whisper could not detect any speech.")
-        sys.exit(1)
-
-    # --- THE SUBTITLE FIX: Grouping words into 3-word chunks ---
-    print("🧠 Forging grouped, readable subtitles...")
-    chunks = []
-    current_chunk = []
-    chunk_start = 0
-
-    for i, word in enumerate(raw_words):
-        if not current_chunk:
-            chunk_start = word['start']
-        
-        current_chunk.append(word['text'])
-        chunk_end = word['start'] + word['duration']
-        
-        # Close the chunk if it has 3 words, is the last word, or there's a pause in speech
-        next_word_start = raw_words[i+1]['start'] if i+1 < len(raw_words) else chunk_end
-        pause_duration = next_word_start - chunk_end
-        
-        if len(current_chunk) >= 3 or i == len(raw_words) - 1 or pause_duration > 0.4:
-            chunks.append({
-                "text": " ".join(current_chunk),
-                "start": chunk_start,
-                "duration": chunk_end - chunk_start
-            })
-            current_chunk = []
-
-    with open("captions.srt", "w", encoding="utf-8") as f:
-        for i, chunk in enumerate(chunks):
-            start = chunk["start"]
-            end = start + chunk["duration"]
-            f.write(f"{i+1}\n")
-            f.write(f"{format_srt_time(start)} --> {format_srt_time(end)}\n")
-            # Strip weird punctuation for bold visual text
-            clean_text = "".join(c for c in chunk['text'] if c.isalnum() or c.isspace() or c in "!?.,'")
-            f.write(f"{clean_text.upper()}\n\n")
-
-    total_audio_time = raw_words[-1]["start"] + raw_words[-1]["duration"]
-    step_time = total_audio_time / 4.0
-
-    # --- THE VECTOR GENERATOR: Writing the Manim animation script on the fly ---
-    print("📐 Generating Mathematical Vector Geometry (Manim)...")
-    manim_code = f"""
+    # We write the Manim script directly to a file
+    manim_code = """
 from manim import *
 import numpy as np
 
-config.pixel_width = 1080
-config.pixel_height = 1920
-config.frame_width = 9.0
-config.frame_height = 16.0
-config.background_color = BLACK
+# Long-form 16:9 Landscape Video
+config.pixel_width = 1920
+config.pixel_height = 1080
+config.frame_width = 16.0
+config.frame_height = 9.0
+config.background_color = "#5B6C5D"
 
-class PsychologyVisual(Scene):
+class PsychologyLongForm(Scene):
     def construct(self):
-        step_time = {step_time}
+        E_COLOR = "#F3EDE2"
+        
+        # We need to fill exactly 5 minutes (300 seconds). 
+        # The pacing is extremely slow, deliberate, and hypnotic.
+        
+        # ---------------------------------------------------------
+        # PHASE 1: The Loop and The Clarity (0:00 - 0:45)
+        # "The moment you see this clearly... stop mid-scroll..."
+        # ---------------------------------------------------------
+        # Create a chaotic, overwhelming grid representing the mental loop/routine
+        lines = VGroup(*[
+            Line(LEFT*10 + UP*y, RIGHT*10 + UP*y, color=E_COLOR, stroke_opacity=0.3)
+            for y in np.arange(-6, 6, 0.4)
+        ])
+        vertical_lines = VGroup(*[
+            Line(DOWN*6 + RIGHT*x, UP*6 + RIGHT*x, color=E_COLOR, stroke_opacity=0.3)
+            for x in np.arange(-10, 10, 0.4)
+        ])
+        grid = VGroup(lines, vertical_lines)
+        
+        self.play(Create(grid, lag_ratio=0.1), run_time=15)
+        
+        # The grid distorts into chaotic waves
+        wave_grid = grid.copy().apply_function(
+            lambda p: p + np.array([np.sin(p[1]), np.cos(p[0]), 0]) * 0.5
+        )
+        self.play(Transform(grid, wave_grid), run_time=15, rate_func=there_and_back)
+        
+        # Collapse into absolute, terrifying clarity (a single glowing point)
+        clarity_point = Dot(radius=0.5, color=E_COLOR)
+        self.play(Transform(grid, clarity_point), run_time=15)
 
-        # Step 1: The Anchor (A rigid line of control)
-        shape = Line(DOWN * 6, UP * 6, color=WHITE).set_stroke(width=5)
-        self.play(Create(shape), run_time=step_time)
 
-        # Step 2: The Action (Distorting into a manipulative frequency)
-        wave = FunctionGraph(lambda x: np.sin(x * 3) * 2, x_range=[-4, 4], color=WHITE).set_stroke(width=5).rotate(PI/2)
-        self.play(Transform(shape, wave), run_time=step_time)
+        # ---------------------------------------------------------
+        # PHASE 2: The First Breath (0:45 - 1:30)
+        # "That moment is the beginning. The first real breath..."
+        # ---------------------------------------------------------
+        # The point expands into concentric, breathing circles
+        breathing_circles = VGroup(*[
+            Circle(radius=r, color=E_COLOR, stroke_width=2) 
+            for r in np.arange(0.5, 8.0, 0.5)
+        ])
+        
+        self.play(Transform(grid, breathing_circles), run_time=15)
+        
+        # Simulate a deep, 30-second breath in and out using scale
+        self.play(grid.animate.scale(1.3), run_time=15, rate_func=smooth)
+        self.play(grid.animate.scale(1/1.3), run_time=15, rate_func=smooth)
 
-        # Step 3: The Twist (The psychological trap)
-        circles = VGroup(*[Circle(radius=r, color=WHITE).set_stroke(width=3) for r in np.arange(0.5, 4.5, 0.5)])
-        self.play(Transform(shape, wave.copy().become(circles)), run_time=step_time)
 
-        # Step 4: The Truth (A sharp, striking realization)
-        poly = RegularPolygon(n=3, color=WHITE).scale(3).set_stroke(width=5)
-        self.play(Transform(shape, wave.copy().become(poly)), run_time=step_time * 0.7)
-        self.play(FadeOut(shape), run_time=step_time * 0.3)
+        # ---------------------------------------------------------
+        # PHASE 3: The Real Reset (1:30 - 2:15)
+        # "Not motivation that fades... A real reset."
+        # ---------------------------------------------------------
+        # Circles collapse into a tangled, complex knot (fleeting motivation)
+        knot = ParametricFunction(
+            lambda t: np.array([
+                np.sin(t) + 2 * np.sin(2 * t),
+                np.cos(t) - 2 * np.cos(2 * t),
+                0
+            ]) * 1.5,
+            t_range=[0, TAU],
+            color=E_COLOR,
+            stroke_width=4
+        )
+        self.play(Transform(grid, knot), run_time=15)
+        
+        # The knot twists and pulses rapidly
+        self.play(Rotate(grid, angle=PI*2), run_time=15, rate_func=linear)
+        
+        # The "Real Reset" - the knot smoothly untangles into a single straight line
+        reset_line = Line(LEFT*8, RIGHT*8, color=E_COLOR, stroke_width=4)
+        self.play(Transform(grid, reset_line), run_time=15)
+
+
+        # ---------------------------------------------------------
+        # PHASE 4: Who You Become (2:15 - 3:15)
+        # "Starts in how you see yourself... ends in who you become."
+        # ---------------------------------------------------------
+        # The line curves into an abstract eye
+        eye_top = ArcBetweenPoints(LEFT*4, RIGHT*4, angle=-PI/2, color=E_COLOR)
+        eye_bottom = ArcBetweenPoints(LEFT*4, RIGHT*4, angle=PI/2, color=E_COLOR)
+        eye = VGroup(eye_top, eye_bottom)
+        
+        self.play(Transform(grid, eye), run_time=20)
+        
+        # The eye morphs into a complex, fully realized geometric mandala
+        mandala = VGroup()
+        for i in range(12):
+            petal = eye_top.copy().rotate(i * PI / 6, about_point=ORIGIN)
+            mandala.add(petal)
+            
+        self.play(Transform(grid, mandala), run_time=20)
+        self.play(Rotate(grid, angle=PI), run_time=20, rate_func=linear)
+
+
+        # ---------------------------------------------------------
+        # PHASE 5: The Loop You Never Consented To (3:15 - 4:15)
+        # "Inside your own brain... quietly... in a loop."
+        # ---------------------------------------------------------
+        # The mandala is swallowed by an infinite, hypnotic spiral
+        spiral = ParametricFunction(
+            lambda t: np.array([
+                t * np.cos(t * 5),
+                t * np.sin(t * 5),
+                0
+            ]) * 0.4,
+            t_range=[0, 15],
+            color=E_COLOR,
+            stroke_width=3
+        )
+        
+        self.play(Transform(grid, spiral), run_time=20)
+        
+        # The spiral rotates endlessly, pulling the viewer in
+        tracker = ValueTracker(0)
+        grid.add_updater(lambda m: m.set_opacity(0.8 + 0.2*np.sin(tracker.get_value())))
+        
+        self.play(
+            Rotate(grid, angle=PI*4), 
+            tracker.animate.set_value(10),
+            run_time=40, 
+            rate_func=linear
+        )
+        grid.clear_updaters()
+
+
+        # ---------------------------------------------------------
+        # PHASE 6: Seeing The Mechanism (4:15 - 5:00)
+        # "Once you see the mechanism... you cannot unsee it."
+        # ---------------------------------------------------------
+        # The fluid spiral snaps into rigid, mechanical interlocking gears
+        gear1 = RegularPolygon(n=12, color=E_COLOR).scale(3)
+        gear2 = RegularPolygon(n=12, color=E_COLOR).scale(3).shift(RIGHT*6)
+        gear3 = RegularPolygon(n=12, color=E_COLOR).scale(3).shift(LEFT*6)
+        mechanism = VGroup(gear1, gear2, gear3)
+        
+        self.play(Transform(grid, mechanism), run_time=15)
+        
+        # The gears grind together
+        self.play(
+            Rotate(grid[0], angle=PI/2),
+            Rotate(grid[1], angle=-PI/2),
+            Rotate(grid[2], angle=-PI/2),
+            run_time=15,
+            rate_func=linear
+        )
+        
+        # Dive into the center of the mechanism to end the video
+        self.play(
+            grid.animate.scale(50).set_opacity(0), 
+            run_time=15, 
+            rate_func=ease_in_expo
+        )
+        
+        self.wait(5)
 """
     with open("scene.py", "w") as f:
         f.write(manim_code)
 
-    # Execute the Manim render command (High Quality, 1080p60)
-    print("🎥 Rendering 1080p60 Vector Animation on GitHub CPU...")
-    subprocess.run(['manim', '-qh', 'scene.py', 'PsychologyVisual'], check=True)
+    # --- 2. Execute Manim Engine (1080p 60FPS) ---
+    print("🎥 Rendering 5-Minute Cinematic Vector Animation on GitHub CPU...")
+    # This will take a few minutes to render. It computes thousands of frames.
+    subprocess.run(['manim', '-qh', 'scene.py', 'PsychologyLongForm'], check=True)
 
-    # --- THE FIX: Auto-Detect Video Path ---
     print("🔍 Locating rendered video...")
     video_files = glob.glob("media/**/*.mp4", recursive=True)
     
     if not video_files:
-        print("❌ Fatal Error: Manim finished, but no MP4 file was found in the media directory.")
+        print("❌ Fatal Error: Manim finished, but no MP4 file was found.")
         sys.exit(1)
         
     video_path = video_files[0]
-    print(f"✅ Found video at: {video_path}")
+    print(f"✅ Found pure visual video at: {video_path}")
 
-    # --- FINAL ASSEMBLY ---
-    print("🎞️ Merging Vector Animation, Audio, and Subtitles...")
-    ffmpeg_cmd = [
-        'ffmpeg', '-y',
-        '-i', video_path,
-        '-i', 'voiceover.wav',
-        '-vf', "subtitles=captions.srt:force_style='Fontname=Liberation Sans,Fontsize=22,PrimaryColour=&H00FFFFFF&,OutlineColour=&H00000000&,Outline=2,Alignment=10'",
-        '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
-        '-c:a', 'aac', '-b:a', '192k',
-        '-shortest',
-        'final_video.mp4'
-    ]
-    
-    subprocess.run(ffmpeg_cmd, check=True)
-    print("✅ Premium Vector Video generated successfully: final_video.mp4")
+        # --- 3. Final Assembly ---
+    os.rename(video_path, "final_video.mp4")
+    print("✅ Silent cinematic video generated successfully: final_video.mp4")
+
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
