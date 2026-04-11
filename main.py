@@ -2,12 +2,22 @@ import os
 import sys
 import json
 import subprocess
+import requests
 from google import genai
 import whisper
 import asyncio
+from PIL import Image
+import io
 
 # --- 1. Configuration ---
 client = genai.Client()
+
+CF_ACCOUNT_ID = os.environ.get('CF_ACCOUNT_ID')
+CF_API_TOKEN = os.environ.get('CF_API_TOKEN')
+
+if not CF_ACCOUNT_ID or not CF_API_TOKEN:
+    print("❌ Error: Cloudflare credentials missing. Please add CF_ACCOUNT_ID and CF_API_TOKEN to GitHub Secrets.")
+    sys.exit(1)
 
 def format_srt_time(seconds):
     hours = int(seconds // 3600)
@@ -99,48 +109,52 @@ async def main():
         
     image_prompts = data.get('image_prompts', [])
 
-    print("🎨 Generating Cinematic Visuals via Gemini 2.5 Flash Image...")
+    print("🎨 Generating Cinematic Visuals via Cloudflare Enterprise AI...")
     image_files = []
     total_audio_time = word_boundaries[-1]["start"] + word_boundaries[-1]["duration"]
     time_per_image = total_audio_time / len(image_prompts)
     
+    # Using Stable Diffusion XL on Cloudflare Infrastructure
+    CF_API_URL = f"[https://api.cloudflare.com/client/v4/accounts/](https://api.cloudflare.com/client/v4/accounts/){CF_ACCOUNT_ID}/ai/run/@cf/stabilityai/stable-diffusion-xl-base-1.0"
+    headers = {"Authorization": f"Bearer {CF_API_TOKEN}"}
+    
     for i, img_prompt in enumerate(image_prompts):
-        # We explicitly enforce the 9:16 vertical ratio in the text prompt for Shorts
-        safe_prompt = f"Vertical 9:16 aspect ratio. High-fidelity anime realism, cinematic lighting. {img_prompt}. Never include ghosts, monsters, or distorted figures."
+        safe_prompt = f"Cinematic lighting, high-fidelity anime realism, dark atmosphere. {img_prompt}. Never include ghosts, monsters, or distorted figures."
         img_path = f"image_{i}.jpg"
         
-        # --- ROBUST GEMINI MULTIMODAL IMAGE DOWNLOADER ---
+        # We request a 9:16 vertical resolution safe for SDXL memory limits
+        payload = {
+            "prompt": safe_prompt,
+            "height": 1024,
+            "width": 576,
+            "num_steps": 20
+        }
+        
         for attempt in range(3):
-            print(f"   -> Requesting image {i+1}/4 from Gemini (Attempt {attempt+1})...")
+            print(f"   -> Requesting image {i+1}/4 from Cloudflare (Attempt {attempt+1})...")
             try:
-                # We use the standard generate_content endpoint now
-                result = client.models.generate_content(
-                    model='gemini-2.5-flash-image',
-                    contents=safe_prompt,
-                )
+                r = requests.post(CF_API_URL, headers=headers, json=payload)
                 
-                # Extract image bytes directly from the multimodal response parts
-                image_saved = False
-                for part in result.candidates[0].content.parts:
-                    if part.inline_data is not None:
-                        with open(img_path, "wb") as f:
-                            f.write(part.inline_data.data)
-                        image_saved = True
-                        break
-                        
-                if image_saved:
+                if r.status_code == 200:
+                    # Cloudflare hands back raw image bytes. 
+                    # We load it into PIL and perfectly upscale it to 1080x1920 for YouTube Shorts
+                    image = Image.open(io.BytesIO(r.content))
+                    resized_image = image.resize((1080, 1920), Image.Resampling.LANCZOS)
+                    resized_image.save(img_path, "JPEG", quality=95)
+                    
                     image_files.append(img_path)
-                    print(f"   ✅ Image {i+1} generated successfully.")
+                    print(f"   ✅ Image {i+1} generated and upscaled successfully.")
                     break
                 else:
-                    raise Exception("No image data found in response. The prompt may have triggered a safety filter.")
-                    
+                    print(f"   ⚠️ Cloudflare API Error {r.status_code}: {r.text}")
+                    await asyncio.sleep(5)
+                    if attempt == 2:
+                        print(f"❌ Fatal Error: Could not fetch image {i+1} from Cloudflare.")
+                        sys.exit(1)
             except Exception as e:
-                print(f"   ⚠️ Gemini Image API Error: {e}")
+                print(f"   ⚠️ Request Error: {e}")
                 await asyncio.sleep(5)
-                if attempt == 2:
-                    print(f"❌ Fatal Error: Could not fetch image {i+1} from Gemini.")
-                    sys.exit(1)
+                if attempt == 2: sys.exit(1)
 
     print("🎞️ Assembling final sequence...")
     with open("images.txt", "w") as f:
