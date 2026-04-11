@@ -114,4 +114,5 @@ class Phase5(Scene):
         grid.clear_updaters()
         
         # The final disappearance
-        self.play(grid.animate.scale(50).set_opacity(0), run_time=20, rate_func=ease_in_expo)
+        self.play(grid.animate.scale(50).set_opacity(0), run_time=20, rate_func=rush_into)
+
