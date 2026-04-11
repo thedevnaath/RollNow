@@ -3,6 +3,7 @@ import sys
 import subprocess
 import whisper
 import asyncio
+import glob
 
 def format_srt_time(seconds):
     hours = int(seconds // 3600)
@@ -100,11 +101,11 @@ class PsychologyVisual(Scene):
 
         # Step 3: The Twist (The psychological trap)
         circles = VGroup(*[Circle(radius=r, color=WHITE).set_stroke(width=3) for r in np.arange(0.5, 4.5, 0.5)])
-        self.play(Transform(shape, circles), run_time=step_time)
+        self.play(Transform(shape, wave.copy().become(circles)), run_time=step_time)
 
         # Step 4: The Truth (A sharp, striking realization)
         poly = RegularPolygon(n=3, color=WHITE).scale(3).set_stroke(width=5)
-        self.play(Transform(shape, poly), run_time=step_time * 0.7)
+        self.play(Transform(shape, wave.copy().become(poly)), run_time=step_time * 0.7)
         self.play(FadeOut(shape), run_time=step_time * 0.3)
 """
     with open("scene.py", "w") as f:
@@ -114,8 +115,16 @@ class PsychologyVisual(Scene):
     print("🎥 Rendering 1080p60 Vector Animation on GitHub CPU...")
     subprocess.run(['manim', '-qh', 'scene.py', 'PsychologyVisual'], check=True)
 
-    # Manim saves files to a specific output folder structure
-    video_path = "media/videos/scene/1080p60/PsychologyVisual.mp4"
+    # --- THE FIX: Auto-Detect Video Path ---
+    print("🔍 Locating rendered video...")
+    video_files = glob.glob("media/**/*.mp4", recursive=True)
+    
+    if not video_files:
+        print("❌ Fatal Error: Manim finished, but no MP4 file was found in the media directory.")
+        sys.exit(1)
+        
+    video_path = video_files[0]
+    print(f"✅ Found video at: {video_path}")
 
     # --- FINAL ASSEMBLY ---
     print("🎞️ Merging Vector Animation, Audio, and Subtitles...")
