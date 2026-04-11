@@ -115,7 +115,11 @@ async def main():
     time_per_image = total_audio_time / len(image_prompts)
     
     # Using Stable Diffusion XL on Cloudflare Infrastructure
-    CF_API_URL = f"[https://api.cloudflare.com/client/v4/accounts/](https://api.cloudflare.com/client/v4/accounts/){CF_ACCOUNT_ID}/ai/run/@cf/stabilityai/stable-diffusion-xl-base-1.0"
+    p1 = "https://"
+    p2 = "api.cloudflare.com/client/v4/accounts/"
+    p3 = f"{CF_ACCOUNT_ID}/ai/run/@cf/stabilityai/stable-diffusion-xl-base-1.0"
+    CF_API_URL = p1 + p2 + p3
+
     headers = {"Authorization": f"Bearer {CF_API_TOKEN}"}
     
     for i, img_prompt in enumerate(image_prompts):
