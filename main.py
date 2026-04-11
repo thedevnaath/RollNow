@@ -3,7 +3,6 @@ import sys
 import json
 import subprocess
 from google import genai
-from google.genai import types
 import whisper
 import asyncio
 
@@ -100,42 +99,47 @@ async def main():
         
     image_prompts = data.get('image_prompts', [])
 
-    print("🎨 Generating Cinematic Visuals via Google Imagen 3...")
+    print("🎨 Generating Cinematic Visuals via Gemini 2.5 Flash Image...")
     image_files = []
     total_audio_time = word_boundaries[-1]["start"] + word_boundaries[-1]["duration"]
     time_per_image = total_audio_time / len(image_prompts)
     
     for i, img_prompt in enumerate(image_prompts):
-        safe_prompt = f"High-fidelity anime realism, cinematic lighting. {img_prompt}. Never include ghosts, monsters, or distorted figures."
+        # We explicitly enforce the 9:16 vertical ratio in the text prompt for Shorts
+        safe_prompt = f"Vertical 9:16 aspect ratio. High-fidelity anime realism, cinematic lighting. {img_prompt}. Never include ghosts, monsters, or distorted figures."
         img_path = f"image_{i}.jpg"
         
-        # --- ROBUST GOOGLE IMAGEN DOWNLOADER ---
+        # --- ROBUST GEMINI MULTIMODAL IMAGE DOWNLOADER ---
         for attempt in range(3):
-            print(f"   -> Requesting image {i+1}/4 from Google Imagen 3 (Attempt {attempt+1})...")
+            print(f"   -> Requesting image {i+1}/4 from Gemini (Attempt {attempt+1})...")
             try:
-                # We use the same Gemini API client to call the Imagen model
-                result = client.models.generate_images(
-                    model='imagen-3.0-generate-002',
-                    prompt=safe_prompt,
-                    config=types.GenerateImagesConfig(
-                        number_of_images=1,
-                        aspect_ratio="9:16", 
-                        output_mime_type="image/jpeg"
-                    )
+                # We use the standard generate_content endpoint now
+                result = client.models.generate_content(
+                    model='gemini-2.5-flash-image',
+                    contents=safe_prompt,
                 )
                 
-                # Extract and save the raw image bytes
-                with open(img_path, "wb") as f:
-                    f.write(result.generated_images[0].image.image_bytes)
-                
-                image_files.append(img_path)
-                print(f"   ✅ Image {i+1} generated successfully.")
-                break
+                # Extract image bytes directly from the multimodal response parts
+                image_saved = False
+                for part in result.candidates[0].content.parts:
+                    if part.inline_data is not None:
+                        with open(img_path, "wb") as f:
+                            f.write(part.inline_data.data)
+                        image_saved = True
+                        break
+                        
+                if image_saved:
+                    image_files.append(img_path)
+                    print(f"   ✅ Image {i+1} generated successfully.")
+                    break
+                else:
+                    raise Exception("No image data found in response. The prompt may have triggered a safety filter.")
+                    
             except Exception as e:
-                print(f"   ⚠️ Imagen API Error: {e}")
+                print(f"   ⚠️ Gemini Image API Error: {e}")
                 await asyncio.sleep(5)
                 if attempt == 2:
-                    print(f"❌ Fatal Error: Could not fetch image {i+1} from Google Imagen.")
+                    print(f"❌ Fatal Error: Could not fetch image {i+1} from Gemini.")
                     sys.exit(1)
 
     print("🎞️ Assembling final sequence...")
