@@ -1,7 +1,7 @@
-name: Generate Psychology Short from Audio
+name: Generate Vector Animation Short
 
 on:
-  workflow_dispatch: # Manual trigger only
+  workflow_dispatch:
 
 jobs:
   create_video:
@@ -19,20 +19,14 @@ jobs:
     - name: Install System Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y ffmpeg fonts-liberation
+        sudo apt-get install -y ffmpeg libcairo2-dev libpango1.0-dev pkg-config fonts-liberation
 
     - name: Install Python Libraries
       run: |
         pip install -r requirements.txt
 
     - name: Run the Video Engine
-      env:
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-        CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
       run: python main.py
-
-
 
     - name: Upload Final Video Artifact
       uses: actions/upload-artifact@v4
