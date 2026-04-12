@@ -1,10 +1,12 @@
-name: Generate Psychology Short
+name: Daily Autonomous Content Factory
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # Allows manual button press
+  schedule:
+    - cron: '0 14 * * *'  # Runs automatically at 14:00 UTC every single day
 
 jobs:
-  create_video:
+  generate_and_render:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,20 +25,24 @@ jobs:
 
     - name: Install Python Libraries
       run: |
-        pip install manim
+        pip install -r requirements.txt
 
-    - name: Run the Video Engine (Medium Quality for Speed)
-      run: manim -qm main.py SpotlightIllusion
+    - name: 🧠 AI Brain - Write the Script
+      env:
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      run: python generate.py
+
+    - name: 🎥 Video Engine - Render the UI (High Quality)
+      run: manim -qh main.py DailyShort
 
     - name: Rename Output File
       run: |
         VIDEO_PATH=$(find media/videos -type f -name "*.mp4" | head -n 1)
-        mv "$VIDEO_PATH" ./final_video.mp4
+        mv "$VIDEO_PATH" ./daily_short.mp4
 
-
-    - name: Upload Final Video Artifact
+    - name: Upload Final Masterpiece
       uses: actions/upload-artifact@v4
       with:
-        name: spotlight-illusion-short
-        path: final_video.mp4
+        name: daily-psychology-short
+        path: daily_short.mp4
         retention-days: 7
