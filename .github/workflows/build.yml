@@ -29,7 +29,10 @@ jobs:
       run: manim -qm main.py SpotlightIllusion
 
     - name: Rename Output File
-      run: mv media/videos/main/720p30/SpotlightIllusion.mp4 ./final_video.mp4
+      run: |
+        VIDEO_PATH=$(find media/videos -type f -name "*.mp4" | head -n 1)
+        mv "$VIDEO_PATH" ./final_video.mp4
+
 
     - name: Upload Final Video Artifact
       uses: actions/upload-artifact@v4
