@@ -1,19 +1,12 @@
-name: Distributed Matrix Render Farm
+name: Generate Psychology Short
 
 on:
   workflow_dispatch:
 
 jobs:
-  # ---------------------------------------------------------
-  # THE WORKERS: 5 Servers running at the same time
-  # ---------------------------------------------------------
-  render_chunks:
+  create_video:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        phase: [Phase1, Phase2, Phase3, Phase4, Phase5]
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -26,57 +19,21 @@ jobs:
     - name: Install System Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y ffmpeg libcairo2-dev libpango1.0-dev pkg-config
+        sudo apt-get install -y ffmpeg libcairo2-dev libpango1.0-dev pkg-config fonts-liberation
 
-    - name: Install Manim
-      run: pip install manim
+    - name: Install Python Libraries
+      run: |
+        pip install manim
 
-    - name: Render High-Quality Chunk
-      run: manim -qh main.py ${{ matrix.phase }}
+    - name: Run the Video Engine (Medium Quality for Speed)
+      run: manim -qm main.py SpotlightIllusion
 
     - name: Rename Output File
-      run: mv media/videos/main/1080p60/${{ matrix.phase }}.mp4 ./chunk_${{ matrix.phase }}.mp4
+      run: mv media/videos/main/720p30/SpotlightIllusion.mp4 ./final_video.mp4
 
-    - name: Upload Chunk to Temporary Storage
+    - name: Upload Final Video Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: chunk-${{ matrix.phase }}
-        path: chunk_${{ matrix.phase }}.mp4
-        retention-days: 1
-
-  # ---------------------------------------------------------
-  # THE ASSEMBLER: 1 Server that wakes up when the others finish
-  # ---------------------------------------------------------
-  assemble_video:
-    needs: render_chunks
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Download all 5 Chunks
-      uses: actions/download-artifact@v4
-      with:
-        pattern: chunk-*
-        merge-multiple: true
-
-    - name: Install FFmpeg
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y ffmpeg
-
-    - name: Seamlessly Stitch Video
-      run: |
-        echo "file 'chunk_Phase1.mp4'" > list.txt
-        echo "file 'chunk_Phase2.mp4'" >> list.txt
-        echo "file 'chunk_Phase3.mp4'" >> list.txt
-        echo "file 'chunk_Phase4.mp4'" >> list.txt
-        echo "file 'chunk_Phase5.mp4'" >> list.txt
-        
-        # -c copy stitches the raw video data instantly without re-encoding
-        ffmpeg -f concat -safe 0 -i list.txt -c copy final_masterpiece.mp4
-
-    - name: Deliver Final 5-Minute Video
-      uses: actions/upload-artifact@v4
-      with:
-        name: final-masterpiece
-        path: final_masterpiece.mp4
+        name: spotlight-illusion-short
+        path: final_video.mp4
         retention-days: 7
