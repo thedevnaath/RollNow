@@ -1,3 +1,5 @@
+import json
+import textwrap
 from manim import *
 
 # Vertical Shorts Configuration (9:16)
@@ -7,9 +9,16 @@ config.frame_width = 9.0
 config.frame_height = 16.0
 config.background_color = BLACK
 
-class SpotlightIllusion(Scene):
+def wrap_text(text, width=38):
+    """Automatically wraps text so it never breaks the screen boundaries."""
+    return "\n".join(textwrap.wrap(text, width=width))
+
+class DailyShort(Scene):
     def construct(self):
-        # Fonts and Colors
+        # Load the AI-generated content
+        with open("content.json", "r", encoding="utf-8") as f:
+            data = json.load(f)
+
         FONT = "Liberation Sans"
         TITLE_COLOR = "#FFC000"  
         BOX_COLOR = "#1C1C1E"    
@@ -19,7 +28,7 @@ class SpotlightIllusion(Scene):
         # PHASE 1: The Hook
         # ---------------------------------------------------------
         hook_text = Text(
-            "The psychological glitch\nmaking you socially anxious.", 
+            wrap_text(data["hook"], width=25), 
             font=FONT,
             font_size=48, 
             color=TEXT_COLOR, 
@@ -27,20 +36,17 @@ class SpotlightIllusion(Scene):
             weight=BOLD
         ).move_to(ORIGIN)
         
-        # Ensure hook doesn't overflow screen width
         if hook_text.width > 8.5:
             hook_text.width = 8.5
             
         self.play(FadeIn(hook_text, shift=UP*0.5), run_time=1.5)
-        self.wait(2)
+        self.wait(2.5)
         self.play(FadeOut(hook_text, shift=UP*0.5), run_time=1)
         self.wait(0.5)
         
         # ---------------------------------------------------------
-        # PHASE 2: The Main Content Structure (Responsive Layout)
+        # PHASE 2: The Main Content Structure
         # ---------------------------------------------------------
-        
-        # 1. Anchor the Box to the center (shifted slightly down for the title)
         content_box = RoundedRectangle(
             corner_radius=0.4, 
             width=8.0, 
@@ -51,45 +57,40 @@ class SpotlightIllusion(Scene):
             stroke_width=0
         ).shift(DOWN * 0.5)
         
-        # 2. Anchor the Title relative to the Box
-        title = Text("THE SPOTLIGHT ILLUSION", font=FONT, font_size=50, color=TITLE_COLOR, weight=BOLD)
+        title = Text(data["title"], font=FONT, font_size=50, color=TITLE_COLOR, weight=BOLD)
         title.next_to(content_box, UP, buff=0.8)
         
-        # Ensure title fits on screen
         if title.width > 8.5:
             title.width = 8.5
             
-        # 3. Create Bullets with optimized line breaks
-        b1 = Text("• Your brain overestimates how much\n  people notice you by 50%.", font=FONT, font_size=34, color=TEXT_COLOR, line_spacing=1.2)
-        b2 = Text("• Everyone around you is trapped in\n  their own first-person simulation.", font=FONT, font_size=34, color=TEXT_COLOR, line_spacing=1.2)
-        b3 = Text("• When you mess up, they aren't\n  judging you. They are thinking\n  about themselves.", font=FONT, font_size=34, color=TEXT_COLOR, line_spacing=1.2)
-        b4 = Text("• True freedom starts the exact\n  moment you realize you are\n  invisible.", font=FONT, font_size=34, color=TEXT_COLOR, line_spacing=1.2)
+        # Dynamically generate bullet points from AI data
+        bullet_mobjects = []
+        for bullet_text in data["bullets"]:
+            wrapped = wrap_text("• " + bullet_text, width=36)
+            # Indent subsequent lines of a bullet point
+            indented = wrapped.replace("\n", "\n  ") 
+            b_mob = Text(indented, font=FONT, font_size=34, color=TEXT_COLOR, line_spacing=1.2)
+            bullet_mobjects.append(b_mob)
         
-        bullets = VGroup(b1, b2, b3, b4)
+        bullets = VGroup(*bullet_mobjects)
         bullets.arrange(DOWN, aligned_edge=LEFT, buff=0.7)
         
-        # 4. THE FIX: Force bullets to fit inside the box with a 1.2 unit margin padding
+        # Responsive padding
         if bullets.width > content_box.width - 1.2:
             bullets.width = content_box.width - 1.2
-            
         if bullets.height > content_box.height - 1.2:
             bullets.height = content_box.height - 1.2
             
-        # 5. Center the perfectly sized text block inside the box
         bullets.move_to(content_box.get_center())
         
         # ---------------------------------------------------------
         # PHASE 3: The Animation Sequence
         # ---------------------------------------------------------
-        
-        # Pop in the Title and the Box
         self.play(FadeIn(title, shift=DOWN*0.5), FadeIn(content_box), run_time=1)
         self.wait(0.5)
         
-        # Fade in Bullets one by one for pacing
         for bullet in bullets:
             self.play(FadeIn(bullet, shift=RIGHT*0.5), run_time=0.8)
-            self.wait(1.5) 
+            self.wait(2.0) # slightly longer wait to read the powerful text
             
-        # Hold the final frame
         self.wait(4)
