@@ -11,7 +11,7 @@ def generate_content():
     genai.configure(api_key=api_key)
     
     # We use Gemini 1.5 Flash - it is lightning fast and great at JSON
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-2.5-flash')
     
     prompt = """
     You are an elite behavioral psychologist and viral copywriter. 
