@@ -1,96 +1,116 @@
-import json
-import textwrap
+import os
+import whisper
 from manim import *
 
-# Vertical Shorts Configuration (9:16)
-config.pixel_width = 1080
-config.pixel_height = 1920
-config.frame_width = 9.0
-config.frame_height = 16.0
-config.background_color = BLACK
+# Horizontal Long-Form Configuration (16:9)
+config.pixel_width = 1920
+config.pixel_height = 1080
+config.frame_width = 16.0
+config.frame_height = 9.0
+config.background_color = "#5B6C5D"
 
-def wrap_text(text, width=38):
-    """Automatically wraps text so it never breaks the screen boundaries."""
-    return "\n".join(textwrap.wrap(text, width=width))
-
-class DailyShort(Scene):
+class KineticTypography(Scene):
     def construct(self):
-        # Load the AI-generated content
-        with open("content.json", "r", encoding="utf-8") as f:
-            data = json.load(f)
+        audio_path = "voiceover.wav"
+        
+        if not os.path.exists(audio_path):
+            print(f"❌ Error: {audio_path} not found in the repository.")
+            return
 
+        # 1. Bind the audio track to the video timeline
+        self.add_sound(audio_path)
+
+        # 2. Run AI Transcription
+        print("🧠 AI is listening and extracting millisecond timestamps...")
+        model = whisper.load_model("base")
+        result = model.transcribe(audio_path, word_timestamps=True)
+        
+        words = []
+        for segment in result['segments']:
+            for word in segment['words']:
+                words.append({
+                    "text": word["word"].strip().upper(),
+                    "start": word["start"],
+                    "end": word["end"]
+                })
+
+        if not words:
+            print("❌ No words detected. Check the audio file.")
+            return
+
+        # 3. Kinetic Typography Setup
         FONT = "Liberation Sans"
-        TITLE_COLOR = "#FFC000"  
-        BOX_COLOR = "#1C1C1E"    
-        TEXT_COLOR = WHITE
+        BASE_COLOR = "#F3EDE2"
+        HIGHLIGHT_COLOR = "#FFFFFF" 
         
-        # ---------------------------------------------------------
-        # PHASE 1: The Hook
-        # ---------------------------------------------------------
-        hook_text = Text(
-            wrap_text(data["hook"], width=25), 
-            font=FONT,
-            font_size=48, 
-            color=TEXT_COLOR, 
-            line_spacing=1.2,
-            weight=BOLD
-        ).move_to(ORIGIN)
+        # We process the text in 4-word "phrases" to keep the screen minimal and focused
+        chunk_size = 4 
+        chunks = [words[i:i + chunk_size] for i in range(0, len(words), chunk_size)]
         
-        if hook_text.width > 8.5:
-            hook_text.width = 8.5
-            
-        self.play(FadeIn(hook_text, shift=UP*0.5), run_time=1.5)
-        self.wait(2.5)
-        self.play(FadeOut(hook_text, shift=UP*0.5), run_time=1)
-        self.wait(0.5)
+        # The master clock strictly prevents floating-point audio drift over long videos
+        master_time = 0.0
         
-        # ---------------------------------------------------------
-        # PHASE 2: The Main Content Structure
-        # ---------------------------------------------------------
-        content_box = RoundedRectangle(
-            corner_radius=0.4, 
-            width=8.0, 
-            height=9.5, 
-            color=BOX_COLOR, 
-            fill_color=BOX_COLOR, 
-            fill_opacity=1,
-            stroke_width=0
-        ).shift(DOWN * 0.5)
-        
-        title = Text(data["title"], font=FONT, font_size=50, color=TITLE_COLOR, weight=BOLD)
-        title.next_to(content_box, UP, buff=0.8)
-        
-        if title.width > 8.5:
-            title.width = 8.5
-            
-        # Dynamically generate bullet points from AI data
-        bullet_mobjects = []
-        for bullet_text in data["bullets"]:
-            wrapped = wrap_text("• " + bullet_text, width=36)
-            # Indent subsequent lines of a bullet point
-            indented = wrapped.replace("\n", "\n  ") 
-            b_mob = Text(indented, font=FONT, font_size=34, color=TEXT_COLOR, line_spacing=1.2)
-            bullet_mobjects.append(b_mob)
-        
-        bullets = VGroup(*bullet_mobjects)
-        bullets.arrange(DOWN, aligned_edge=LEFT, buff=0.7)
-        
-        # Responsive padding
-        if bullets.width > content_box.width - 1.2:
-            bullets.width = content_box.width - 1.2
-        if bullets.height > content_box.height - 1.2:
-            bullets.height = content_box.height - 1.2
-            
-        bullets.move_to(content_box.get_center())
-        
-        # ---------------------------------------------------------
-        # PHASE 3: The Animation Sequence
-        # ---------------------------------------------------------
-        self.play(FadeIn(title, shift=DOWN*0.5), FadeIn(content_box), run_time=1)
-        self.wait(0.5)
-        
-        for bullet in bullets:
-            self.play(FadeIn(bullet, shift=RIGHT*0.5), run_time=0.8)
-            self.wait(2.0) # slightly longer wait to read the powerful text
-            
-        self.wait(4)
+        def sync_time(target):
+            nonlocal master_time
+            if target > master_time:
+                self.wait(target - master_time)
+                master_time = target
+
+        # 4. The Animation Engine
+        for chunk in chunks:
+            phrase_group = VGroup(*[
+                Text(w["text"], font=FONT, font_size=72, color=BASE_COLOR, weight=BOLD)
+                for w in chunk
+            ]).arrange(RIGHT, buff=0.4).move_to(ORIGIN)
+
+            # Ensure phrase never breaks screen bounds
+            if phrase_group.width > 14:
+                phrase_group.width = 14
+
+            chunk_start = chunk[0]["start"]
+            sync_time(chunk_start)
+
+            # Snap phrase onto the screen
+            self.play(FadeIn(phrase_group, shift=UP*0.5, scale=0.9), run_time=0.2, rate_func=rush_into)
+            master_time += 0.2
+
+            # Word-by-word active highlighting
+            for i, w in enumerate(chunk):
+                word_mob = phrase_group[i]
+                w_start = w["start"]
+                w_end = w["end"]
+                
+                sync_time(w_start)
+
+                duration = w_end - w_start
+                punch_time = 0.1
+                
+                # Prevent micro-glitches for words spoken extremely fast
+                if duration < 0.2:
+                    duration = 0.2
+
+                # PUNCH UP: Word scales toward the camera
+                self.play(
+                    word_mob.animate.set_color(HIGHLIGHT_COLOR).scale(1.2),
+                    run_time=punch_time,
+                    rate_func=rush_into
+                )
+                master_time += punch_time
+
+                # HOLD: Wait for the speaker to finish the word
+                hold_time = duration - punch_time
+                if hold_time > 0:
+                    self.wait(hold_time)
+                    master_time += hold_time
+
+                # SNAP DOWN: Returns to base scale but retains the white highlight
+                self.play(
+                    word_mob.animate.scale(1 / 1.2),
+                    run_time=0.1,
+                    rate_func=rush_from
+                )
+                master_time += 0.1
+
+            # Snap the phrase off the screen
+            self.play(FadeOut(phrase_group, shift=UP*0.5, scale=1.1), run_time=0.2, rate_func=rush_from)
+            master_time += 0.2
