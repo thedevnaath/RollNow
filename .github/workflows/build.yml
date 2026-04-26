@@ -1,9 +1,7 @@
-name: Daily Autonomous Content Factory
+name: Kinetic Typography Generator
 
 on:
-  workflow_dispatch:  # Allows manual button press
-  schedule:
-    - cron: '0 14 * * *'  # Runs automatically at 14:00 UTC every single day
+  workflow_dispatch:  # Allows manual button press from mobile
 
 jobs:
   generate_and_render:
@@ -27,22 +25,17 @@ jobs:
       run: |
         pip install -r requirements.txt
 
-    - name: 🧠 AI Brain - Write the Script
-      env:
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      run: python generate.py
-
-    - name: 🎥 Video Engine - Render the UI (High Quality)
-      run: manim -qh main.py DailyShort
+    - name: 🎥 Video Engine - Render Kinetic Typography
+      run: manim -qh main.py KineticTypography
 
     - name: Rename Output File
       run: |
         VIDEO_PATH=$(find media/videos -type f -name "*.mp4" | head -n 1)
-        mv "$VIDEO_PATH" ./daily_short.mp4
+        mv "$VIDEO_PATH" ./final_kinetic_video.mp4
 
     - name: Upload Final Masterpiece
       uses: actions/upload-artifact@v4
       with:
-        name: daily-psychology-short
-        path: daily_short.mp4
+        name: kinetic-typography-video
+        path: final_kinetic_video.mp4
         retention-days: 7
