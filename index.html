@@ -3,136 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SaaS Landing | Live AI Support</title>
+    <title>The Golden Whisk Bakery | Live AI Clerk</title>
     <script type="module" src="script.js" defer></script>
     <style>
         :root {
-            --bg-color: #0d0d0d;
-            --text-color: #F3EDE2;
-            --accent-color: #50C878; /* The emerald green you liked */
-            --chat-bg: #1C1C1E;
+            --bg-color: #0f0e11;
+            --card-bg: #1c1a22;
+            --accent-color: #f39c12; /* Warm bakery gold */
+            --text-main: #f5f4f6;
         }
         body {
-            margin: 0;
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
+            margin: 0; font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-color); color: var(--text-main);
+            display: flex; justify-content: center; padding: 40px 20px;
         }
-        .hero {
-            text-align: center;
-            max-width: 800px;
-            padding: 20px;
+        .container { max-width: 900px; width: 100%; margin-right: 400px; }
+        h1 { color: var(--accent-color); font-size: 2.5rem; margin-bottom: 5px; }
+        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px; }
+        .menu-item { background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid #2d2936; }
+        .menu-item h3 { margin: 0 0 10px 0; color: var(--accent-color); }
+        .price { font-weight: bold; color: #2ecc71; }
+
+        /* Advanced Multimodal Live Panel */
+        #live-panel {
+            position: fixed; top: 40px; right: 20px; width: 360px; height: calc(100vh - 80px);
+            background: var(--card-bg); border-radius: 16px; border: 1px solid #2d2936;
+            display: flex; flex-direction: column; box-shadow: 0 15px 40px rgba(0,0,0,0.6);
         }
-        h1 { font-size: 3rem; margin-bottom: 10px; }
-        p { font-size: 1.2rem; color: #aaa; line-height: 1.6; }
+        #panel-header {
+            background: var(--accent-color); color: #000; padding: 15px;
+            font-weight: bold; border-radius: 16px 16px 0 0; display: flex; justify-content: space-between;
+        }
+        #chat-stream { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .bubble { padding: 10px 14px; border-radius: 8px; max-width: 85%; font-size: 0.95rem; line-height: 1.4; }
+        .bubble.user { background: #34495e; align-self: flex-end; }
+        .bubble.ai { background: rgba(243, 156, 18, 0.15); border: 1px solid var(--accent-color); align-self: flex-start; }
         
-        /* Chat Widget Styles */
-        #chat-widget {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 350px;
-            height: 500px;
-            background-color: var(--chat-bg);
-            border: 1px solid #333;
-            border-radius: 12px;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-            transform: translateY(150%);
-            transition: transform 0.3s ease-in-out;
-        }
-        #chat-widget.open { transform: translateY(0); }
+        #controls { padding: 15px; border-top: 1px solid #2d2936; display: flex; flex-direction: column; gap: 10px; }
+        .row { display: flex; gap: 10px; }
+        input { flex-grow: 1; background: #0b0a0d; border: 1px solid #3c3548; color: #fff; padding: 12px; border-radius: 8px; outline: none; }
+        button { background: var(--accent-color); color: #000; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; }
         
-        #chat-header {
-            background-color: var(--accent-color);
-            color: #000;
-            padding: 15px;
-            font-weight: bold;
-            border-top-left-radius: 12px;
-            border-top-right-radius: 12px;
-            display: flex;
-            justify-content: space-between;
-            cursor: pointer;
-        }
-        #chat-history {
-            flex-grow: 1;
-            padding: 15px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .msg { padding: 10px 15px; border-radius: 8px; max-width: 80%; line-height: 1.4; }
-        .msg.user { background-color: #333; align-self: flex-end; }
-        .msg.ai { background-color: rgba(80, 200, 120, 0.2); border: 1px solid var(--accent-color); align-self: flex-start; }
+        .toggle-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.95rem; }
+        #voice-btn { background: #e74c3c; color: white; }
+        #voice-btn.active { background: #2ecc71; }
+        #vision-btn { background: #2980b9; color: white; }
+        #vision-btn.active { background: #2ecc71; }
         
-        #chat-input-area {
-            display: flex;
-            padding: 10px;
-            border-top: 1px solid #333;
-        }
-        #chat-input {
-            flex-grow: 1;
-            background: #000;
-            border: 1px solid #444;
-            color: white;
-            padding: 10px;
-            border-radius: 6px;
-            outline: none;
-        }
-        #send-btn {
-            background: var(--accent-color);
-            color: #000;
-            border: none;
-            padding: 10px 15px;
-            margin-left: 10px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        
-        #chat-toggle {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background-color: var(--accent-color);
-            color: #000;
-            border: none;
-            padding: 15px 25px;
-            border-radius: 30px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(80,200,120,0.4);
-        }
+        #video-preview { width: 100%; height: 100px; object-fit: cover; border-radius: 8px; display: none; background: #000; }
     </style>
 </head>
 <body>
-    <div class="hero">
-        <h1>Welcome to the Future.</h1>
-        <p>This is an experimental landing page. Test our live Gemini-powered customer service agent by clicking the chat bubble in the bottom right corner.</p>
+
+    <div class="container">
+        <h1>The Golden Whisk Bakery</h1>
+        <p>Welcome to our experimental automated storefront. Use the live console to place orders, check menu details, or visually show items to the clerk.</p>
+        
+        <div class="menu-grid">
+            <div class="menu-item">
+                <h3>Sourdough Loaf</h3>
+                <p>Naturally leavened crisp crust with a soft, tangy interior.</p>
+                <span class="price">$6.50</span>
+            </div>
+            <div class="menu-item">
+                <h3>Artisan Butter Croissant</h3>
+                <p>Flaky, golden-brown layers made with 100% French premium butter.</p>
+                <span class="price">$4.00</span>
+            </div>
+            <div class="menu-item">
+                <h3>Glazed Cinnamon Roll</h3>
+                <p>Warm spices swirled with rich cream cheese frosting.</p>
+                <span class="price">$5.25</span>
+            </div>
+            <div class="menu-item">
+                <h3>Vegan Blueberry Muffin</h3>
+                <p>Bursting with wild organic blueberries and a sweet crumble topping.</p>
+                <span class="price">$3.75</span>
+            </div>
+        </div>
     </div>
 
-    <button id="chat-toggle">💬 Chat with Support</button>
-
-    <div id="chat-widget">
-        <div id="chat-header">
-            <span>Gemini Live Agent</span>
-            <span id="close-chat">✖</span>
+    <!-- Live Multimodal Control System -->
+    <div id="live-panel">
+        <div id="panel-header">
+            <span>Bakery AI Counter Clerk</span>
+            <span id="status-tag">🔴 Offline</span>
         </div>
-        <div id="chat-history">
-            <div class="msg ai">Hello! I'm the experimental Gemini agent. How can I help you today?</div>
+        <div id="chat-stream">
+            <div class="bubble ai">Welcome to The Golden Whisk! I can chat via text, listen to your voice, and visually see your screen or menu items if you toggle vision on. How can I serve you?</div>
         </div>
-        <div id="chat-input-area">
-            <input type="text" id="chat-input" placeholder="Type a message...">
-            <button id="send-btn">Send</button>
+        <div id="controls">
+            <video id="video-preview" autoplay playsinline muted></video>
+            <button id="vision-btn" class="toggle-btn">👁️ Enable Live Vision (See Screen)</button>
+            <button id="voice-btn" class="toggle-btn">🎙️ Connect Live Audio (Talk)</button>
+            <div class="row">
+                <input type="text" id="text-input" placeholder="Type a message...">
+                <button id="send-btn">Send</button>
+            </div>
         </div>
     </div>
+
 </body>
 </html>
