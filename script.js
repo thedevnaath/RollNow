@@ -6,7 +6,7 @@ let ws;
 let audioCtx;
 let mediaStream;
 let audioProcessor;
-let screenStream;
+let cameraStream;
 let visionInterval;
 
 let isVoiceActive = false;
@@ -38,15 +38,15 @@ function startLiveSession() {
         ws.onopen = () => {
             statusTag.textContent = "🟢 Live Connected";
             
-            // Register model parameters & give context
+            // Registered Exact Model from Dashboard
             ws.send(JSON.stringify({
                 setup: {
-                    model: "models/gemini-3.1-flash-live-preview",
+                    model: "models/gemini-3-flash-live",
                     generationConfig: {
-                        responseModalities: ["AUDIO", "TEXT"] // Handles both text logs and voice playback
+                        responseModalities: ["AUDIO", "TEXT"]
                     },
                     systemInstruction: {
-                        parts: [{ text: "You are the live counter clerk at 'The Golden Whisk Bakery'. You can interact with text, listen to the customer's voice, and visually analyze what they are looking at on their screen in real-time. Assist them with menu prices, ingredients, descriptions, and mock checkouts politely." }]
+                        parts: [{ text: "You are the live counter clerk at 'The Golden Whisk Bakery'. You can interact with text, listen to the customer's voice, and visually see their camera feed. Assist them with menu prices, ingredients, and checkout politely." }]
                     }
                 }
             }));
@@ -70,7 +70,7 @@ function startLiveSession() {
     });
 }
 
-// 2. Real-time Audio Output Player (24kHz standard output)
+// 2. Real-time Audio Output Player
 function playAudioData(base64) {
     if (!audioCtx) return;
     const binary = window.atob(base64);
@@ -109,10 +109,7 @@ textInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendText()
 
 // 4. Real-time Voice Component (Input 16kHz PCM stream)
 async function toggleVoice() {
-    if (isVoiceActive) {
-        stopVoice();
-        return;
-    }
+    if (isVoiceActive) { stopVoice(); return; }
     await startLiveSession();
     audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
     
@@ -153,26 +150,25 @@ function stopVoice() {
     voiceBtn.classList.remove('active');
 }
 
-// 5. Real-time Vision Component (Captures browser tab visual content frames)
+// 5. Mobile Camera Component (Uses Back-Facing Camera)
 async function toggleVision() {
-    if (isVisionActive) {
-        stopVision();
-        return;
-    }
+    if (isVisionActive) { stopVision(); return; }
     await startLiveSession();
     
     try {
-        // Prompts the browser to capture the current bakery tab visually
-        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { width: 640, height: 480, frameRate: 5 } });
-        videoPreview.srcObject = screenStream;
+        // Request the device's back-facing camera instead of screen share
+        cameraStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 480 } } 
+        });
+        videoPreview.srcObject = cameraStream;
         videoPreview.style.display = "block";
         
-        const track = screenStream.getVideoTracks()[0];
+        const track = cameraStream.getVideoTracks()[0];
         const capture = new ImageCapture(track);
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
 
-        // Capture 1 JPEG snapshot per second and stream it over the WebSocket
+        // Capture 1 JPEG snapshot per second
         visionInterval = setInterval(async () => {
             if (ws.readyState !== WebSocket.OPEN) return;
             try {
@@ -190,22 +186,22 @@ async function toggleVision() {
                         }));
                     };
                     reader.readAsDataURL(blob);
-                }, 'image/jpeg', 0.6); // Compress output to preserve operational speed
+                }, 'image/jpeg', 0.6); 
             } catch (e) { console.log("Frame dropped: ", e); }
         }, 1000);
 
         isVisionActive = true;
-        visionBtn.textContent = "⏹️ Stop Screen Vision";
+        visionBtn.textContent = "⏹️ Stop Camera Vision";
         visionBtn.classList.add('active');
-    } catch (err) { addMessage("Vision error: " + err.message, "ai"); }
+    } catch (err) { addMessage("Camera error: " + err.message, "ai"); }
 }
 
 function stopVision() {
     clearInterval(visionInterval);
-    if (screenStream) screenStream.getTracks().forEach(t => t.stop());
+    if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
     videoPreview.style.display = "none";
     isVisionActive = false;
-    visionBtn.textContent = "👁️ Enable Live Vision (See Screen)";
+    visionBtn.textContent = "📷 Open Camera for AI";
     visionBtn.classList.remove('active');
 }
 
