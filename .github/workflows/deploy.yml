@@ -1,0 +1,40 @@
+name: Deploy Live Gemini Landing Page
+
+on:
+  push:
+    branches: ["main"] # Auto-deploys when you push to main
+  workflow_dispatch:   # Allows manual deployment
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Inject Gemini API Key
+        env:
+          API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          # Finds the placeholder in script.js and replaces it with your real key
+          sed -i "s/Gemini api/$API_KEY/g" script.js
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+          
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
