@@ -25,7 +25,7 @@ jobs:
           API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           # Finds the placeholder in script.js and replaces it with your real key
-          sed -i "s/Gemini api/$API_KEY/g" script.js
+          sed -i "s/INJECT_API_KEY_HERE/$API_KEY/g" script.js
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
