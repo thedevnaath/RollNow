@@ -3,101 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Golden Whisk Bakery | Live AI Clerk</title>
-    <script type="module" src="script.js" defer></script>
-    <style>
-        :root {
-            --bg-color: #0f0e11;
-            --card-bg: #1c1a22;
-            --accent-color: #f39c12;
-            --text-main: #f5f4f6;
-        }
-        body {
-            margin: 0; font-family: 'Segoe UI', Arial, sans-serif;
-            background-color: var(--bg-color); color: var(--text-main);
-            display: flex; justify-content: center; padding: 20px;
-        }
-        .container { max-width: 900px; width: 100%; padding-bottom: 500px; } /* Padding for mobile scroll */
-        h1 { color: var(--accent-color); font-size: 2rem; margin-bottom: 5px; }
-        .menu-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px; }
-        @media(min-width: 600px){ .menu-grid { grid-template-columns: 1fr 1fr; } }
-        .menu-item { background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid #2d2936; }
-        .menu-item h3 { margin: 0 0 10px 0; color: var(--accent-color); }
-        .price { font-weight: bold; color: #2ecc71; }
+    <title>TV PDF Viewer</title>
 
-        /* Mobile-Optimized Multimodal Live Panel */
-        #live-panel {
-            position: fixed; bottom: 0; left: 0; right: 0; height: 350px;
-            background: var(--card-bg); border-top-left-radius: 16px; border-top-right-radius: 16px; 
-            border-top: 1px solid #2d2936; display: flex; flex-direction: column; box-shadow: 0 -10px 40px rgba(0,0,0,0.8);
-            z-index: 1000;
-        }
-        #panel-header {
-            background: var(--accent-color); color: #000; padding: 10px 15px;
-            font-weight: bold; border-radius: 16px 16px 0 0; display: flex; justify-content: space-between;
-        }
-        #chat-stream { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .bubble { padding: 10px 14px; border-radius: 8px; max-width: 85%; font-size: 0.9rem; line-height: 1.4; }
-        .bubble.user { background: #34495e; align-self: flex-end; }
-        .bubble.ai { background: rgba(243, 156, 18, 0.15); border: 1px solid var(--accent-color); align-self: flex-start; }
-        
-        #controls { padding: 10px; border-top: 1px solid #2d2936; display: flex; flex-direction: column; gap: 8px; }
-        .row { display: flex; gap: 10px; }
-        input { flex-grow: 1; background: #0b0a0d; border: 1px solid #3c3548; color: #fff; padding: 10px; border-radius: 8px; outline: none; }
-        button { background: var(--accent-color); color: #000; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        
-        .toggle-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.9rem; }
-        #voice-btn { background: #e74c3c; color: white; }
-        #voice-btn.active { background: #2ecc71; }
-        #vision-btn { background: #2980b9; color: white; }
-        #vision-btn.active { background: #2ecc71; }
-        
-        #video-preview { width: 100%; height: 80px; object-fit: cover; border-radius: 8px; display: none; background: #000; }
-    </style>
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
 
-    <div class="container">
-        <h1>The Golden Whisk Bakery</h1>
-        <p>Experimental mobile storefront. Point your camera at a menu item or speak your order.</p>
-        
-        <div class="menu-grid">
-            <div class="menu-item">
-                <h3>Sourdough Loaf</h3>
-                <p>Naturally leavened crisp crust with a soft, tangy interior.</p>
-                <span class="price">$6.50</span>
-            </div>
-            <div class="menu-item">
-                <h3>Artisan Butter Croissant</h3>
-                <p>Flaky, golden-brown layers made with premium butter.</p>
-                <span class="price">$4.00</span>
-            </div>
-            <div class="menu-item">
-                <h3>Glazed Cinnamon Roll</h3>
-                <p>Warm spices swirled with rich cream cheese frosting.</p>
-                <span class="price">$5.25</span>
-            </div>
-        </div>
-    </div>
+<div id="toolbar">
 
-    <div id="live-panel">
-        <div id="panel-header">
-            <span>Bakery AI Live Agent</span>
-            <span id="status-tag">🔴 Offline</span>
-        </div>
-        <div id="chat-stream">
-            <div class="bubble ai">Welcome! I can chat, talk, and see through your camera. How can I help?</div>
-        </div>
-        <div id="controls">
-            <video id="video-preview" autoplay playsinline muted></video>
-            <button id="vision-btn" class="toggle-btn">📷 Open Camera for AI</button>
-            <button id="voice-btn" class="toggle-btn">🎙️ Connect Live Audio (Talk)</button>
-            <div class="row">
-                <input type="text" id="text-input" placeholder="Type a message...">
-                <button id="send-btn">Send</button>
-            </div>
-        </div>
-    </div>
+    <button id="prev">◀ Prev</button>
+
+    <span id="pageInfo">
+        Page <span id="pageNum">1</span> /
+        <span id="pageCount">0</span>
+    </span>
+
+    <button id="next">Next ▶</button>
+
+    <button id="zoomOut">－</button>
+    <button id="zoomIn">＋</button>
+
+    <button id="fullscreen">⛶ Fullscreen</button>
+
+</div>
+
+<div id="viewerContainer">
+    <canvas id="pdfCanvas"></canvas>
+</div>
+
+<script src="app.js"></script>
 
 </body>
 </html>
