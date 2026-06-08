@@ -46,3 +46,35 @@ canvas{
 #pageInfo{
     font-size:20px;
 }
+
+/* NEW: Page Jump Input Styling */
+#pageJump {
+    padding: 10px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    background: #2a2a2a; /* Slightly lighter than toolbar to stand out */
+    color: white;
+    width: 130px;
+    text-align: center;
+    outline: none;
+}
+
+#pageJump::placeholder {
+    color: #888;
+}
+
+/* Hide the default browser arrows in the number input */
+#pageJump::-webkit-outer-spin-button,
+#pageJump::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+#pageJump[type=number] {
+    -moz-appearance: textfield;
+}
+
+/* NEW: PDF Canvas Dark Mode */
+canvas.dark-mode {
+    filter: invert(0.9) hue-rotate(180deg);
+}
