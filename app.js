@@ -106,9 +106,7 @@ document.addEventListener("keydown", e => {
             break;
 
         case "Enter":
-            if(document.documentElement.requestFullscreen){
-                document.documentElement.requestFullscreen();
-            }
+            toggleFullscreen();
             break;
     }
 });
