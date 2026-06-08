@@ -112,3 +112,58 @@ document.addEventListener("keydown", e => {
             break;
     }
 });
+
+// --- NEW: Page Jump Feature ---
+const pageJumpInput = document.getElementById("pageJump");
+
+pageJumpInput.addEventListener("change", (e) => {
+    let requestedPage = parseInt(e.target.value);
+    
+    // Check if the page exists
+    if (requestedPage >= 1 && requestedPage <= pdfDoc.numPages) {
+        queueRender(requestedPage);
+    }
+    
+    // Clear the input box and remove focus so TV remote arrows work normally again
+    e.target.value = ""; 
+    e.target.blur(); 
+});
+
+// --- NEW: Dark Mode Feature ---
+const darkModeBtn = document.getElementById("darkMode");
+
+darkModeBtn.onclick = () => {
+    canvas.classList.toggle("dark-mode");
+    if (canvas.classList.contains("dark-mode")) {
+        darkModeBtn.textContent = "☀ Light Mode";
+    } else {
+        darkModeBtn.textContent = "◑ Dark Mode";
+    }
+};
+
+// --- UPDATED: Fullscreen Toggle Feature ---
+// Find your existing document.getElementById("fullscreen").onclick function and REPLACE it with this:
+
+const fullscreenBtn = document.getElementById("fullscreen");
+
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => console.log(err));
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
+    }
+}
+
+fullscreenBtn.onclick = toggleFullscreen;
+
+// This listener detects whenever fullscreen opens or closes (even via TV remote or ESC key)
+// and updates the button text accordingly.
+document.addEventListener("fullscreenchange", () => {
+    if (document.fullscreenElement) {
+        fullscreenBtn.textContent = "⛶ Normal Screen";
+    } else {
+        fullscreenBtn.textContent = "⛶ Fullscreen";
+    }
+});
