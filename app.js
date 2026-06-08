@@ -39,15 +39,46 @@ function queueRender(page) {
     renderPage(pageNum);
 }
 
-pdfjsLib.getDocument(PDF_URL).promise.then(pdf => {
+// Function to load any PDF URL or Local File Object
+function loadPDF(url) {
+    pdfjsLib.getDocument(url).promise.then(pdf => {
+        pdfDoc = pdf;
+        pageNum = 1; // Reset to page 1 for the newly uploaded document
+        document.getElementById("pageCount").textContent = pdf.numPages;
+        renderPage(pageNum);
+    }).catch(err => {
+        console.log("No default PDF found or error loading PDF.");
+    });
+}
 
-    pdfDoc = pdf;
+// Try to load the default document.pdf initially (keeps your old feature working)
+loadPDF(PDF_URL);
 
-    document.getElementById("pageCount").textContent =
-        pdf.numPages;
+// --- NEW: Local File Upload Logic ---
+const fileInput = document.getElementById("fileInput");
+const uploadBtn = document.getElementById("uploadBtn");
 
-    renderPage(pageNum);
-});
+// When the user clicks the sleek button, trigger the hidden file input
+uploadBtn.onclick = () => {
+    fileInput.click();
+};
+
+// When a user selects a file, convert it to a local URL and load it
+fileInput.onchange = (e) => {
+    const file = e.target.files[0];
+    
+    // Ensure the file exists and is actually a PDF
+    if (file && file.type === "application/pdf") {
+        // Create a temporary local URL for the selected file
+        const objectUrl = URL.createObjectURL(file);
+        
+        // Load the new document into the viewer
+        loadPDF(objectUrl);
+        
+        // Optional: Remove focus from the button so TV remote arrow keys keep working immediately
+        uploadBtn.blur();
+    }
+};
 
 document.getElementById("prev").onclick = () => {
     queueRender(pageNum - 1);
