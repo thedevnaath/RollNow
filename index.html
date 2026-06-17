@@ -4,36 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TV PDF Viewer</title>
-
+    
     <link rel="stylesheet" href="style.css">
-
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
 
-<div id="toolbar">
-    
-    <button id="prev">◀ Prev</button>
-
-    <span id="pageInfo">
-        Page <span id="pageNum">1</span> /
-        <span id="pageCount">0</span>
-    </span>
-
-    <button id="next">Next ▶</button>
-    <input type="number" id="pageJump" placeholder="Go to page..." min="1">
-    <button id="zoomOut">－</button>
-    <button id="zoomIn">＋</button>
-    <button id="darkMode">◑ Dark Mode</button>
-    <button id="fullscreen">⛶ Fullscreen</button>
-
+<div id="homeScreen">
+    <h1>Library</h1>
+    <div id="fileList">
+        </div>
 </div>
 
-<div id="viewerContainer">
-    <canvas id="pdfCanvas"></canvas>
+<div id="viewerScreen" style="display: none;">
+    <div id="toolbar">
+        <button id="homeBtn"><i data-lucide="home"></i> Home</button>
+        <button id="prev"><i data-lucide="chevron-left"></i> Prev</button>
+
+        <span id="pageInfo">
+            Page <span id="pageNum">1</span> /
+            <span id="pageCount">0</span>
+        </span>
+
+        <input type="number" id="pageJump" placeholder="Go to page..." min="1">
+        
+        <button id="next">Next <i data-lucide="chevron-right"></i></button>
+
+        <button id="zoomOut"><i data-lucide="zoom-out"></i></button>
+        <button id="zoomIn"><i data-lucide="zoom-in"></i></button>
+
+        <button id="darkMode"><i data-lucide="moon"></i> Dark Mode</button>
+        <button id="fullscreen"><i data-lucide="maximize"></i> Fullscreen</button>
+    </div>
+
+    <div id="viewerContainer">
+        <canvas id="pdfCanvas"></canvas>
+    </div>
 </div>
 
 <script src="app.js"></script>
-
 </body>
 </html>
