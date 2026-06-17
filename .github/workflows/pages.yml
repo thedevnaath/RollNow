@@ -26,17 +26,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # --- NEW STEP: Automate PDF handling ---
-      - name: Auto-Route Uploaded PDF
+      # --- NEW: Automatically scan and index all PDFs ---
+      - name: Generate PDF List
         run: |
-          # Find the first .pdf file in the pdf directory
-          PDF_FILE=$(find pdf -maxdepth 1 -name "*.pdf" | head -n 1)
-          
-          # If a PDF is found, and it's not already named document.pdf, copy it over
-          if [ -n "$PDF_FILE" ] && [ "$PDF_FILE" != "pdf/document.pdf" ]; then
-            echo "Routing $PDF_FILE to document.pdf for the live site."
-            cp "$PDF_FILE" pdf/document.pdf
-          fi
+          node -e "
+          const fs = require('fs');
+          const dir = './pdf';
+          let data = [];
+          if (fs.existsSync(dir)) {
+            const files = fs.readdirSync(dir).filter(f => f.endsWith('.pdf'));
+            data = files.map(f => ({ path: 'pdf/' + f, name: f }));
+          }
+          fs.writeFileSync('files.json', JSON.stringify(data));
+          "
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
