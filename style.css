@@ -1,59 +1,124 @@
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-body{
-    background:#111;
-    color:white;
-    font-family:Arial,sans-serif;
-    overflow:hidden;
+body {
+    background: #111;
+    color: white;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
 }
 
-#toolbar{
-    height:70px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:12px;
-
-    background:#1a1a1a;
-    border-bottom:1px solid #333;
+/* --- Home Screen Styling --- */
+#homeScreen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
 }
 
-button{
-    padding:10px 18px;
-    font-size:18px;
-    border:none;
-    border-radius:8px;
-    cursor:pointer;
+#homeScreen h1 {
+    font-size: 34px;
+    font-weight: 300;
+    margin-bottom: 40px;
+    letter-spacing: 1.5px;
+    color: #fff;
 }
 
-#viewerContainer{
-    height:calc(100vh - 70px);
-    overflow:auto;
-    text-align:center;
+#fileList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    max-width: 500px;
 }
 
-canvas{
-    margin:20px auto;
-    display:block;
-    background:white;
-    max-width:100%;
+.file-btn {
+    background: #1c1c1e;
+    color: #f5f5f7;
+    padding: 20px 24px;
+    border: none;
+    border-radius: 14px;
+    font-size: 18px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 16px;
 }
 
-#pageInfo{
-    font-size:20px;
+.file-btn:hover, .file-btn:focus {
+    background: #2c2c2e;
+    transform: scale(1.02);
+    outline: none;
 }
 
-/* NEW: Page Jump Input Styling */
+/* --- Toolbar and Canvas UI --- */
+#toolbar {
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: #1a1a1a;
+    border-bottom: 1px solid #333;
+}
+
+button {
+    padding: 10px 18px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #2a2a2a;
+    color: white;
+}
+
+button:hover {
+    background: #333;
+}
+
+/* Sizing for Lucide SVGs */
+.lucide {
+    width: 20px;
+    height: 20px;
+}
+
+#viewerContainer {
+    height: calc(100vh - 70px);
+    overflow: auto;
+    text-align: center;
+}
+
+canvas {
+    margin: 20px auto;
+    display: block;
+    background: white;
+    max-width: 100%;
+}
+
+#pageInfo {
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
 #pageJump {
     padding: 10px;
     font-size: 16px;
     border: none;
     border-radius: 8px;
-    background: #2a2a2a; /* Slightly lighter than toolbar to stand out */
+    background: #2a2a2a;
     color: white;
     width: 130px;
     text-align: center;
@@ -64,7 +129,6 @@ canvas{
     color: #888;
 }
 
-/* Hide the default browser arrows in the number input */
 #pageJump::-webkit-outer-spin-button,
 #pageJump::-webkit-inner-spin-button {
     -webkit-appearance: none;
@@ -74,7 +138,6 @@ canvas{
     -moz-appearance: textfield;
 }
 
-/* NEW: PDF Canvas Dark Mode */
 canvas.dark-mode {
     filter: invert(0.9) hue-rotate(180deg);
 }
